@@ -2,6 +2,7 @@ program exemplo75 (input, output) ;
 var m,n :  integer ;
 var p : integer ;
 label 100;
+var a:integer;
 begin
 	if (1=1) then
 	begin

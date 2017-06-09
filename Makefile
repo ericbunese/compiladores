@@ -16,4 +16,4 @@ list.o: list.c
 	gcc -c list.c -o list.o
 
 clean :
-	rm -f compilador.tab.* lex.yy.c *.output
+	rm -f compilador.tab.* lex.yy.c *.output *.o

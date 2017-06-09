@@ -48,7 +48,7 @@ label      { simbolo = simb_label;
           strncpy (token, yytext, TAM_TOKEN);
           IMPRIME("label  ");
           return LABEL;
- } 
+ }
 
 begin { simbolo = simb_begin;
           strncpy (token, yytext, TAM_TOKEN);
@@ -134,6 +134,13 @@ else  { simbolo = simb_else;
           IMPRIME(" else ");
           return ELSE;
      }
+
+ procedure  {  simbolo = simb_procedure;
+               strncpy (token, yytext, TAM_TOKEN);
+               IMPRIME(" procedure ");
+               return PROCEDURE;
+          }
+
 \=     { simbolo = simb_igual;
           strncpy (token, yytext, TAM_TOKEN);
           IMPRIME(" igual ")

@@ -1,8 +1,3 @@
-
-// Testar se funciona corretamente o empilhamento de parâmetros
-// passados por valor ou por referência.
-
-
 %{
 #include <stdio.h>
 #include <ctype.h>
@@ -21,7 +16,7 @@ list TS;
 %token PROGRAM ABRE_PARENTESES FECHA_PARENTESES
 %token VIRGULA PONTO_E_VIRGULA DOIS_PONTOS PONTO
 %token T_BEGIN T_END VAR LABEL IDENT NUMERO ATRIBUICAO
-%token WHILE DO IF THEN ELSE
+%token WHILE DO IF THEN ELSE PROCEDURE
 %token IGUAL MENOR MENOR_IGUAL MAIOR MAIOR_IGUAL DIF
 
 %%
@@ -47,12 +42,24 @@ bloco       : {totalVar = 0}
 ;
 
 parte_declara_coisas: parte_declara_coisas parte_declara_vars
-                    | parte_declara_coisas parte_declara_rotulos
+                    | parte_declara_coisas parte_declara_labels
+                    | parte_declara_coisas parte_declara_procedure
                     |
 ;
 
-parte_declara_rotulos: label
-                     | parte_declara_rotulos label
+parte_declara_procedures: procedure
+                          | parte_declara_procedures procedure
+;
+
+procedure: PROCEDURE declara_procedure
+           |
+;
+
+declara_procedure: IDENT ABRE_PARENTESES lista_id_parametros FECHA_PARENTESES PONTO_E_VIRGULA bloco
+;
+
+parte_declara_labels: label
+                     | parte_declara_labels label
 ;
 
 label: LABEL declara_labels
@@ -100,13 +107,13 @@ lista_id_var: lista_id_var VIRGULA IDENT
               {
                contVar++;
                totalVar++;
-               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar)
+               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar-1)
               }
             | IDENT
               {
                contVar++;
                totalVar++;
-               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar)
+               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar-1)
               }
 ;
 
