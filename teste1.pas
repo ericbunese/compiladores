@@ -1,4 +1,10 @@
 program exemplo75 (input, output) ;
+procedure proc(a:integer, b:boolean);
+begin
+a:=1
+end;
+
+
 var m,n :  integer ;
 var p : integer ;
 label 100;

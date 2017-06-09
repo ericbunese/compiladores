@@ -43,7 +43,7 @@ bloco       : {totalVar = 0}
 
 parte_declara_coisas: parte_declara_coisas parte_declara_vars
                     | parte_declara_coisas parte_declara_labels
-                    | parte_declara_coisas parte_declara_procedure
+                    | parte_declara_coisas parte_declara_procedures
                     |
 ;
 
@@ -56,6 +56,14 @@ procedure: PROCEDURE declara_procedure
 ;
 
 declara_procedure: IDENT ABRE_PARENTESES lista_id_parametros FECHA_PARENTESES PONTO_E_VIRGULA bloco
+;
+
+lista_id_parametros: lista_id_parametros VIRGULA parametros
+                   | parametros
+;
+
+parametros: IDENT DOIS_PONTOS tipo
+          | VAR IDENT DOIS_PONTOS tipo
 ;
 
 parte_declara_labels: label
