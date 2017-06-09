@@ -135,11 +135,17 @@ else  { simbolo = simb_else;
           return ELSE;
      }
 
- procedure  {  simbolo = simb_procedure;
+procedure  {  simbolo = simb_procedure;
                strncpy (token, yytext, TAM_TOKEN);
                IMPRIME(" procedure ");
                return PROCEDURE;
           }
+
+function  {  simbolo = simb_function;
+              strncpy (token, yytext, TAM_TOKEN);
+              IMPRIME(" function ");
+              return FUNCTION;
+         }
 
 \=     { simbolo = simb_igual;
           strncpy (token, yytext, TAM_TOKEN);
@@ -171,6 +177,43 @@ else  { simbolo = simb_else;
           IMPRIME(" diferente ")
           return DIF;
        }
+\+     { simbolo = simb_mais;
+          strncpy (token, yytext, TAM_TOKEN);
+          IMPRIME(" mais ")
+          return MAIS;
+       }
+\-     { simbolo = simb_menos;
+          strncpy (token, yytext, TAM_TOKEN);
+          IMPRIME(" menos ")
+          return MENOS;
+       }
+\*     { simbolo = simb_mult;
+          strncpy (token, yytext, TAM_TOKEN);
+          IMPRIME(" mult ")
+          return MULT;
+       }
+and     { simbolo = simb_and;
+          strncpy (token, yytext, TAM_TOKEN);
+          IMPRIME(" and ")
+          return AND;
+       }
+or     { simbolo = simb_or;
+          strncpy (token, yytext, TAM_TOKEN);
+          IMPRIME(" or ")
+          return OR;
+       }
+div     { simbolo = simb_div;
+          strncpy (token, yytext, TAM_TOKEN);
+          IMPRIME(" div ")
+          return DIV;
+       }
+mod     { simbolo = simb_mod;
+          strncpy (token, yytext, TAM_TOKEN);
+          IMPRIME(" mod ")
+          return MOD;
+       }
+
+
 
 {ident} { simbolo = simb_identificador;
           strncpy (token, yytext, TAM_TOKEN);

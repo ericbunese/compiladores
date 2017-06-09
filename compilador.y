@@ -16,8 +16,9 @@ list TS;
 %token PROGRAM ABRE_PARENTESES FECHA_PARENTESES
 %token VIRGULA PONTO_E_VIRGULA DOIS_PONTOS PONTO
 %token T_BEGIN T_END VAR LABEL IDENT NUMERO ATRIBUICAO
-%token WHILE DO IF THEN ELSE PROCEDURE
+%token WHILE DO IF THEN ELSE PROCEDURE FUNCTION
 %token IGUAL MENOR MENOR_IGUAL MAIOR MAIOR_IGUAL DIF
+%token MAIS MENOS AND OR MULT DIV MOD
 
 %%
 
@@ -44,22 +45,26 @@ bloco       : {totalVar = 0}
 parte_declara_coisas: parte_declara_coisas parte_declara_vars
                     | parte_declara_coisas parte_declara_labels
                     | parte_declara_coisas parte_declara_procedures
+                    | parte_declara_coisas parte_declara_functions
                     |
 ;
 
-parte_declara_procedures: procedure
-                          | parte_declara_procedures procedure
-;
-
-procedure: PROCEDURE declara_procedure
-           |
+parte_declara_procedures: PROCEDURE declara_procedure
 ;
 
 declara_procedure: IDENT ABRE_PARENTESES lista_id_parametros FECHA_PARENTESES PONTO_E_VIRGULA bloco
 ;
 
+parte_declara_functions: FUNCTION declara_function
+;
+
+declara_function: IDENT ABRE_PARENTESES lista_id_parametros FECHA_PARENTESES DOIS_PONTOS tipo PONTO_E_VIRGULA bloco
+;
+
+
 lista_id_parametros: lista_id_parametros VIRGULA parametros
                    | parametros
+                   |
 ;
 
 parametros: IDENT DOIS_PONTOS tipo
@@ -136,6 +141,7 @@ comando_composto: T_BEGIN comandos T_END
 
 comandos: comando
         | comandos PONTO_E_VIRGULA comando
+        |
 ;
 
 comando: rotulo comando_sem_rotulo
@@ -147,10 +153,10 @@ rotulo: NUMERO DOIS_PONTOS
 
 comando_sem_rotulo: regra_if
                   | regra_while
-                  | IDENT regra_ident
+                  | IDENT {strcpy(elementoEsquerda, token);} regra_ident
 ;
 
-regra_if: IF expressao THEN comando_composto talveztemelse
+regra_if: IF expressao_completa THEN comando_composto talveztemelse
 ;
 
 talveztemelse: PONTO_E_VIRGULA
@@ -160,19 +166,43 @@ talveztemelse: PONTO_E_VIRGULA
 regra_while: WHILE
     { //gera
     }
-    expressao DO comando_composto
+    expressao_completa DO comando_composto
 ;
 
-regra_ident: ATRIBUICAO variavel
-           | ABRE_PARENTESES lista_idents FECHA_PARENTESES
+regra_ident: ATRIBUICAO variavel                                      //Atribuição.
+           | ABRE_PARENTESES lista_idents FECHA_PARENTESES                      //Chamada Função ou procedimento.
 ;
 
 variavel: NUMERO
         | IDENT
 ;
 
-expressao: variavel compara variavel
-         | ABRE_PARENTESES expressao FECHA_PARENTESES
+expressao_completa: {printf("1\n");} expressao {printf("2\n");} expressao_completa2 {printf("3\n");}
+;
+
+expressao_completa2: {printf("4\n");}compara {printf("5\n");} expressao {printf("6\n");}
+                   | {printf("7\n");}
+;
+
+expressao: {printf("8\n");} expressao {printf("9\n");} expressao2 {printf("10\n");}
+         | {printf("11\n");} termo {printf("12\n");}
+         |
+;
+
+expressao2: {printf("13\n");} MAIS {printf("14\n");} termo {printf("15\n");}
+          | {printf("16\n");} AND {printf("17\n");} termo {printf("18\n");}
+;
+
+termo: {printf("19\n");} termo {printf("20\n");} termo2 {printf("21\n");}
+     | {printf("22\n");} fator {printf("23\n");}
+;
+
+termo2: {printf("24\n");} MULT {printf("25\n");} fator {printf("26\n");}
+      | {printf("27\n");} OR  {printf("28\n");} fator {printf("29\n");}
+;
+
+fator: {printf("30\n");} variavel {printf("31\n");}
+     | {printf("32\n");} ABRE_PARENTESES {printf("33\n");} expressao {printf("34\n");} FECHA_PARENTESES {printf("35\n");}
 ;
 
 compara: IGUAL | MENOR | MENOR_IGUAL | MAIOR | MAIOR_IGUAL | DIF

@@ -1,11 +1,14 @@
 program exemplo75 (input, output) ;
-procedure proc(a:integer, b:boolean);
-begin
-a:=1
-end;
-
-
 var m,n :  integer ;
+	procedure proc(a:integer, b:boolean);
+	begin
+	a:=1
+	end
+
+	function barf():integer;
+	begin
+
+	end
 var p : integer ;
 label 100;
 var a:integer;
