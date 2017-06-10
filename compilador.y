@@ -17,8 +17,11 @@ int nivelLexico, deslocamento;
 char elementoEsquerda[TAM_TOKEN];
 //TS: Tabela de Símbolos.
 list TS;
+//parametroAtual: indica qual a posição do parametro atual.
+int parametroAtual;
 
 list pilhona;
+list parametros;
 
 %}
 
@@ -90,7 +93,7 @@ declara_procedure: IDENT
                     geraCodigo(NULL, "DSVS", rotuloSaida, NULL, NULL);
                     geraCodigo(rotulo, "ENPR", str, NULL, NULL);
                    }
-                   ABRE_PARENTESES {contVar = 0;} lista_id_parametros
+                   ABRE_PARENTESES {contVar = 0; nivelLexico++;} lista_id_parametros
                    {
                     //atualiza nParams na TS.
                     node n = list_next(list_first(pilhona));
@@ -102,10 +105,24 @@ declara_procedure: IDENT
                       ss->categoriaTs.c->nParams = contVar;
                      }
                     }
+                    //Agora atualiza os símbolos de parâmetros com seus deslocamentos.
+                    node c = list_next(list_first(pilhona));
+                    tSimboloTs* sp = list_value(c);
+                    if (sp && sp->categoria == TS_CAT_CP)
+                    {
+                     int np = sp->categoriaTs.c->nParams, i=-4;
+                     while(np>0)
+                     {
+                      node n = list_pop(parametros);
+                      tSimboloTs* ss = list_value(n);
+                      if (ss && ss->categoria == TS_CAT_PF)
+                      {
+                       ss->categoriaTs.p->deslocamento = i--;
+                      }
+                      np--;
+                     }
+                    }
                    } FECHA_PARENTESES PONTO_E_VIRGULA
-                   {
-                    nivelLexico++;
-                   }
                    bloco
                    {
                     node p = list_pop(pilhona);
@@ -134,7 +151,7 @@ declara_procedure: IDENT
 parte_declara_functions: FUNCTION declara_function
 ;
 
-declara_function: IDENT ABRE_PARENTESES lista_id_parametros FECHA_PARENTESES DOIS_PONTOS tipo PONTO_E_VIRGULA bloco
+declara_function: IDENT ABRE_PARENTESES {} lista_id_parametros FECHA_PARENTESES DOIS_PONTOS tipo PONTO_E_VIRGULA bloco
 ;
 
 lista_id_parametros: lista_id_parametros VIRGULA parametros
@@ -154,19 +171,25 @@ lista_id_parametros: lista_id_parametros VIRGULA parametros
                    |
 ;
 
-parametros: IDENT DOIS_PONTOS tipo
+parametros: IDENT {strcpy(elementoEsquerda, token);} DOIS_PONTOS tipo
             {
+             tSimboloTs* ss = criaSimboloTS_PF(elementoEsquerda, nivelLexico);
+             ss->categoriaTs.p->tipoPassagem = TS_PAR_VAL;
              node p = list_first(pilhona);
              int* params;
              params = list_value(p);
              params[contVar] = TS_PAR_VAL;
+             list_push(ss, parametros);
             }
-          | VAR IDENT DOIS_PONTOS tipo
+          | VAR IDENT {strcpy(elementoEsquerda, token);} DOIS_PONTOS tipo
             {
+             tSimboloTs* ss = criaSimboloTS_PF(elementoEsquerda, nivelLexico);
+             ss->categoriaTs.p->tipoPassagem = TS_PAR_REF;
              node p = list_first(pilhona);
              int* params;
              params = list_value(p);
              params[contVar] = TS_PAR_REF;
+             list_push(ss, parametros);
             }
 ;
 
@@ -283,7 +306,7 @@ comando_sem_rotulo: regra_if
                       else
                       {
                        char str[100];
-                       sprintf(str, "O token %s não é da categoria Variável Simples\n", token);
+                       sprintf(str, "O token %s não é de categoria válida\n", token);
                        imprimeErro(str);
                       }
                      }
@@ -398,15 +421,50 @@ regra_ident: ATRIBUICAO expressao                                               
                 sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
                 geraCodigo(NULL, "ARMZ", nl, ds, NULL);
                }
+               else if (ss->categoria == TS_CAT_PF)
+               {
+                if (ss->categoriaTs.p->tipoPassagem == TS_PAR_VAL)              //Escrita em PF - valor
+                {
+                 char nl[TAM_TOKEN], ds[TAM_TOKEN];
+                 sprintf(nl, "%d", ss->nivel);
+                 sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
+                 geraCodigo(NULL, "ARMZ", nl, ds, NULL);
+                }
+                else if (ss->categoriaTs.p->tipoPassagem == TS_PAR_REF)         //Escrita em PF - referência
+                {
+                 char nl[TAM_TOKEN], ds[TAM_TOKEN];
+                 sprintf(nl, "%d", ss->nivel);
+                 sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
+                 geraCodigo(NULL, "ARMI", nl, ds, NULL);
+                }
+               }
                else
                {
                 char str[100];
-                sprintf(str, "O token %s não é da categoria Variável Simples\n", token);
+                sprintf(str, "O token %s não é de categoria válida\n", token);
                 imprimeErro(str);
                }
               }
              }
-           | ABRE_PARENTESES lista_idents FECHA_PARENTESES                      //Chamada Função ou procedimento.
+           | ABRE_PARENTESES { parametroAtual=0; } lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
+             {
+              tSimboloTs* ss = buscaTS(elementoEsquerda);
+              if (ss)
+              {
+               if (ss->categoria == TS_CAT_CP)
+               {
+                char nl[TAM_TOKEN];
+                sprintf(nl, "%d", nivelLexico);
+                geraCodigo(NULL, "CHPR", ss->categoriaTs.c->rotulo, nl, NULL);
+               }
+               else
+               {
+                char str[100];
+                sprintf(str, "O token %s não é da categoria correta\n", token);
+                imprimeErro(str);
+               }
+              }
+             }
 ;
 
 variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
@@ -423,10 +481,27 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
              sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
              geraCodigo(NULL, "CRVL", nl, ds, NULL);
             }
+            else if (ss->categoria == TS_CAT_PF)
+            {
+             if (ss->categoriaTs.p->tipoPassagem == TS_PAR_VAL)                 //Leitura em PF - Valor
+             {
+              char nl[TAM_TOKEN], ds[TAM_TOKEN];
+              sprintf(nl, "%d", ss->nivel);
+              sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
+              geraCodigo(NULL, "CRVL", nl, ds, NULL);
+             }
+             else if (ss->categoriaTs.p->tipoPassagem == TS_PAR_REF)            //Leitura em PF - Referência
+             {
+              char nl[TAM_TOKEN], ds[TAM_TOKEN];
+              sprintf(nl, "%d", ss->nivel);
+              sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
+              geraCodigo(NULL, "CRVI", nl, ds, NULL);
+             }
+            }
             else
             {
              char str[100];
-             sprintf(str, "O token %s não é da categoria Variável Simples\n", token);
+             sprintf(str, "O token %s não é de categoria válida\n", token);
              imprimeErro(str);
             }
            }
@@ -436,6 +511,24 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
 ////////////////////////////////////////////////////////////////
 // EXPRESSÕES
 ////////////////////////////////////////////////////////////////
+
+lista_expressoes_call: lista_expressoes_call VIRGULA
+                       {
+                        tSimboloTs* ss = buscaTS(elementoEsquerda);
+                        if (ss)
+                        {
+                         if (ss->categoria == TS_CAT_CP)
+                         {
+                          
+                         }
+                        }
+                       }
+                       expressao { parametroAtual++; }
+                    |
+                       {
+
+                       }
+                       expressao { parametroAtual++; }
 
 lista_expressoes_write: lista_expressoes_write VIRGULA expressao {geraCodigo(NULL, "IMPR", NULL, NULL, NULL);}
                       | expressao {geraCodigo(NULL, "IMPR", NULL, NULL, NULL);}
@@ -459,7 +552,7 @@ expressao: termo expressao_intermediaria expressao_intermediaria2
 
 expressao_intermediaria2: expressao2 expressao
                         | termo2 expressao
-                        | 
+                        |
 ;
 
 expressao_intermediaria: expressao2
@@ -519,6 +612,7 @@ int main (int argc, char** argv)
    //Cria a tabela de símbolos.
    TS = criaTS();
    pilhona = list_new();
+   parametros = list_new();
 
    yyin=fp;
    yyparse();

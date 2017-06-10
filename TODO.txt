@@ -1,0 +1,6 @@
+checagem de tipos em atribuições e comparações
+checagem de quantidade de argumentos em chamadas de procedimentos e funções
+declarar funções
+passar parâmetros por referência
+remover parâmetros formais da ts
+remover procedimentos e funções da ts ao descer o nível léxico

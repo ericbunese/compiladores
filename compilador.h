@@ -101,9 +101,10 @@ void imprimeSimboloTS(tSimboloTs* t);
 tSimboloTs* criaSimboloTS(char* rot, int categoria, int nivel);
 tSimboloTs* criaSimboloTS_VS(char *rot, int categoria, int nivel, int deslocamento);
 tSimboloTs* criaSimboloTS_CP(char* rot, int nivel, char* rotulo_chamada, char* rotulo_saida);
+tSimboloTs* criaSimboloTS_PF(char* rot, int nivel);
 
 void atualizaSimboloTS_VS(tSimboloTs* s, int tipo);
-void atualizaSimboloTS_PF(tSimboloTs* s, int deslocamento, int tipoPassagem);
+void atualizaSimboloTS_PF(tSimboloTs* s, int deslocamento);
 void atualizaSimboloTS_CP(tSimboloTs* s, int* tipoPassagem);
 
 int insereTS(tSimboloTs* s);
