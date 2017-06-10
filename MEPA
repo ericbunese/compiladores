@@ -1,4 +1,17 @@
      INPP
+     AMEM 1
+     DSVS R00
+R01: ENPR 0
      AMEM 2
-     AMEM 1
-     AMEM 1
+     CRCT 1
+     IMPR
+     DMEM 2
+     RTPR 0, 0
+R00: NADA
+     LEIT 0, 0
+     CRCT 1
+     IMPR
+     LEIT 0, 0
+     IMPR
+     DMEM 1
+     PARA

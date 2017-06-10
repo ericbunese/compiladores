@@ -19,12 +19,15 @@
 
 extern list TS;
 
+//maxRotulo: Valor do último rótulo gerado.
+int maxRotulo;
+
 /* -------------------------------------------------------------------
  *  vari�veis globais
  * ------------------------------------------------------------------- */
 
 FILE* fp=NULL;
-void geraCodigo (char* rot, char* comando, int* arg1, int* arg2, int* arg3)
+void geraCodigo (char* rot, char* comando, char* arg1, char* arg2, char* arg3)
 {
   if (fp == NULL) {
     fp = fopen ("MEPA", "w");
@@ -36,15 +39,15 @@ void geraCodigo (char* rot, char* comando, int* arg1, int* arg2, int* arg3)
   }
   if (arg1 != NULL)
   {
-    fprintf(fp, " %d", *arg1);
+    fprintf(fp, " %s", arg1);
   }
   if (arg2 != NULL)
   {
-    fprintf(fp, ", %d", *arg2);
+    fprintf(fp, ", %s", arg2);
   }
   if (arg3 != NULL)
   {
-    fprintf(fp, ", %d", *arg3);
+    fprintf(fp, ", %s", arg3);
   }
   fprintf(fp, "\n");
 }
@@ -82,6 +85,26 @@ tSimboloTs* criaSimboloTS_VS(char *rot, int categoria, int nivel, int deslocamen
    t->categoria = categoria;
    t->nivel = nivel;
    t->categoriaTs.v->deslocamento = deslocamento;
+
+   if (!insereTS(t))
+    printf("Catástrofe detectada:\nNão foi possível inserir o símbolo na TS\n");
+  }
+  return t;
+}
+
+tSimboloTs* criaSimboloTS_CP(char* rot, int nivel, char* rotulo_chamada, char* rotulo_saida)
+{
+  tSimboloTs* t = (tSimboloTs*)malloc(sizeof(tSimboloTs));
+  t->categoriaTs.c = (tCpTs*)malloc(sizeof(tCpTs));
+  t->categoria = TS_CAT_CP;
+  if (t)
+  {
+   t->ident = (char*)malloc(sizeof(char)*TAM_TOKEN);
+   strcpy(t->ident, rot);
+   t->nivel = nivel;
+   t->categoriaTs.c->rotulo = rotulo_chamada;
+   t->categoriaTs.c->rotulo_saida = rotulo_saida;
+   t->categoriaTs.c->nivel = nivel;
 
    if (!insereTS(t))
     printf("Catástrofe detectada:\nNão foi possível inserir o símbolo na TS\n");
@@ -259,4 +282,29 @@ char *tipoPassagemTS(int tipo)
    return "?";
   break;
  }
+}
+
+//Gera rótulo
+char* geraRotulo()
+{
+ char* rot;
+ rot = (char*)malloc(sizeof(char)*10);
+ sprintf(rot, "R%2.0d", maxRotulo++);
+ for (int i=0;i<9;++i)
+ {
+  if (rot[i]==' ')
+   rot[i] = '0';
+ }
+ return rot;
+}
+
+void imprimeTS()
+{
+ printf("\n\n==================\n\nTABELA DE SÍMBOLOS\n\n==================\n");
+ for (node n=list_first(TS); n; n=list_next(n))
+ {
+  tSimboloTs* t = list_value(n);
+  imprimeSimboloTS(t);
+ }
+ printf("\n\n==================\n");
 }

@@ -147,6 +147,18 @@ function  {  simbolo = simb_function;
               return FUNCTION;
          }
 
+read  {  simbolo = simb_read;
+             strncpy (token, yytext, TAM_TOKEN);
+             IMPRIME(" function ");
+             return READ;
+        }
+
+write  {  simbolo = simb_write;
+            strncpy (token, yytext, TAM_TOKEN);
+            IMPRIME(" function ");
+            return WRITE;
+       }
+
 \=     { simbolo = simb_igual;
           strncpy (token, yytext, TAM_TOKEN);
           IMPRIME(" igual ")

@@ -36,7 +36,7 @@ typedef enum simbolos {
   simb_atribuicao, simb_abre_parenteses, simb_fecha_parenteses,
   simb_while, simb_do, simb_if, simb_then, simb_else, simb_procedure, simb_function,
   simb_igual, simb_menor, simb_menor_igual, simb_maior, simb_maior_igual, simb_dif,
-  simb_and, simb_or, simb_mais, simb_menos, simb_div, simb_mod, simb_mult
+  simb_and, simb_or, simb_mais, simb_menos, simb_div, simb_mod, simb_mult, simb_read, simb_write
 } simbolos;
 
 //Campos da tabela de símbolos para variáveis simples
@@ -57,6 +57,7 @@ typedef struct pfTs
 typedef struct cpTs
 {
  char* rotulo;
+ char* rotulo_saida;
  int nivel;
  int nParams;
  int* tipoPassagem;
@@ -92,13 +93,14 @@ char token[TAM_TOKEN];
 
 int yylex();
 void yyerror(const char *s);
-void geraCodigo (char* rot, char* comando, int* arg1, int* arg2, int* arg3);
+void geraCodigo (char* rot, char* comando, char* arg1, char* arg2, char* arg3);
 int imprimeErro(char* erro);
 
 list criaTS();
 void imprimeSimboloTS(tSimboloTs* t);
 tSimboloTs* criaSimboloTS(char* rot, int categoria, int nivel);
 tSimboloTs* criaSimboloTS_VS(char *rot, int categoria, int nivel, int deslocamento);
+tSimboloTs* criaSimboloTS_CP(char* rot, int nivel, char* rotulo_chamada, char* rotulo_saida);
 
 void atualizaSimboloTS_VS(tSimboloTs* s, int tipo);
 void atualizaSimboloTS_PF(tSimboloTs* s, int deslocamento, int tipoPassagem);
@@ -112,3 +114,6 @@ char *intToStr(int n);
 char *catTS(int categoria);
 char *tipoTS(int tipo);
 char *tipoPassagemTS(int tipo);
+
+char* geraRotulo();
+void imprimeTS();

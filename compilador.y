@@ -5,11 +5,20 @@
 #include <string.h>
 #include "compilador.h"
 
-int num_vars, contVar, totalVar;
-int maxRotulo;
+//num_vars: Total de variáveis no programa
+int num_vars;
+//contVar: Total de variáveis na linha
+int contVar;
+//totalVar[i]: Total de variáveis no nível léxico i
+int totalVar[10];
+//nivelLexico, deslocamento: variáveis de controle de endereçamento.
 int nivelLexico, deslocamento;
+//elementoEsquerda: nome do token à esquerda em atribuições, chamadas de função, etc.
 char elementoEsquerda[TAM_TOKEN];
+//TS: Tabela de Símbolos.
 list TS;
+
+list pilhona = list_new();
 
 %}
 
@@ -19,26 +28,31 @@ list TS;
 %token WHILE DO IF THEN ELSE PROCEDURE FUNCTION
 %token IGUAL MENOR MENOR_IGUAL MAIOR MAIOR_IGUAL DIF
 %token MAIS MENOS AND OR MULT DIV MOD
+%token READ WRITE
 
 %%
 
 programa    :{
-              geraCodigo (NULL, "INPP", NULL, NULL, NULL);
+              geraCodigo(NULL, "INPP", NULL, NULL, NULL);
              }
              PROGRAM IDENT
              ABRE_PARENTESES lista_idents FECHA_PARENTESES PONTO_E_VIRGULA
              bloco PONTO
              {
-              geraCodigo (NULL, "PARA", NULL, NULL, NULL);
+              geraCodigo(NULL, "PARA", NULL, NULL, NULL);
              }
 ;
 
-bloco       : {totalVar = 0}
+bloco       : {totalVar[nivelLexico] = 0}
               parte_declara_coisas
               comando_composto
               {
-               if (totalVar>0)
-                   geraCodigo (NULL, "DMEM", &totalVar, NULL, NULL)
+               if (totalVar[nivelLexico]>0)
+               {
+                char str[TAM_TOKEN];
+                sprintf(str, "%d", totalVar[nivelLexico]);
+                geraCodigo(NULL, "DMEM", str, NULL, NULL);
+               }
               }
 ;
 
@@ -49,10 +63,57 @@ parte_declara_coisas: parte_declara_coisas parte_declara_vars
                     |
 ;
 
+////////////////////////////////////////////////////////////////
+// PROCEDURES E FUNCTIONS
+////////////////////////////////////////////////////////////////
+
 parte_declara_procedures: PROCEDURE declara_procedure
 ;
 
-declara_procedure: IDENT ABRE_PARENTESES lista_id_parametros FECHA_PARENTESES PONTO_E_VIRGULA bloco
+declara_procedure: IDENT
+                   {
+                    strcpy(elementoEsquerda, token);
+                    char rotulo[10], rotuloSaida[10];
+                    strcpy(rotuloSaida, geraRotulo());
+                    strcpy(rotulo, geraRotulo());
+                    char str[TAM_TOKEN];
+                    sprintf(str, "%d", nivelLexico);
+                    criaSimboloTS_CP(token, nivelLexico, rotulo, rotuloSaida);
+                    geraCodigo(NULL, "DSVS", rotuloSaida, NULL, NULL);
+                    geraCodigo(rotulo, "ENPR", str, NULL, NULL);
+                   }
+                   ABRE_PARENTESES {contVar = 0;} lista_id_parametros
+                   {
+                    //atualiza nParams na TS.
+                    tSimboloTs* ss = buscaTS(elementoEsquerda);
+                    if (ss)
+                    {
+                     if (ss->categoria == TS_CAT_CP)
+                     {
+                      ss->categoriaTs.c->nParams = contVar;
+                     }
+                    }
+                   } FECHA_PARENTESES PONTO_E_VIRGULA
+                   {
+                    nivelLexico++;
+                   }
+                   bloco
+                   {
+                    imprimeTS();
+                    tSimboloTs* ss = buscaTS(elementoEsquerda);
+                    if (ss)
+                    {
+                     if (ss->categoria == TS_CAT_CP)
+                     {
+                      char str1[TAM_TOKEN], str2[TAM_TOKEN];
+                      nivelLexico--;
+                      sprintf(str1, "%d", nivelLexico);
+                      sprintf(str2, "%d", ss->categoriaTs.c->nParams);
+                      geraCodigo(NULL, "RTPR", str1, str2, NULL);
+                      geraCodigo(ss->categoriaTs.c->rotulo_saida, "NADA", NULL, NULL, NULL);
+                     }
+                    }
+                   }
 ;
 
 parte_declara_functions: FUNCTION declara_function
@@ -61,15 +122,18 @@ parte_declara_functions: FUNCTION declara_function
 declara_function: IDENT ABRE_PARENTESES lista_id_parametros FECHA_PARENTESES DOIS_PONTOS tipo PONTO_E_VIRGULA bloco
 ;
 
-
-lista_id_parametros: lista_id_parametros VIRGULA parametros
-                   | parametros
+lista_id_parametros: lista_id_parametros VIRGULA parametros {contVar++;}
+                   | parametros {contVar++;}
                    |
 ;
 
 parametros: IDENT DOIS_PONTOS tipo
           | VAR IDENT DOIS_PONTOS tipo
 ;
+
+////////////////////////////////////////////////////////////////
+// LABELS
+////////////////////////////////////////////////////////////////
 
 parte_declara_labels: label
                      | parte_declara_labels label
@@ -91,6 +155,10 @@ lista_id_label: lista_id_label VIRGULA NUMERO
               | NUMERO { /* insere label na tabela de símbolos */}
 ;
 
+////////////////////////////////////////////////////////////////
+// VARIÁVEIS
+////////////////////////////////////////////////////////////////
+
 parte_declara_vars:  var
                   |  parte_declara_vars var
 ;
@@ -107,8 +175,10 @@ declara_var : {contVar = 0}
               lista_id_var DOIS_PONTOS
               tipo
               {
-                geraCodigo (NULL, "AMEM", &contVar, NULL, NULL);
-                atualizaTS(contVar, token);
+               char str[TAM_TOKEN];
+               sprintf(str, "%d", contVar);
+               geraCodigo (NULL, "AMEM", str, NULL, NULL);
+               atualizaTS(contVar, token);
               }
               PONTO_E_VIRGULA
 ;
@@ -119,14 +189,14 @@ tipo        : IDENT
 lista_id_var: lista_id_var VIRGULA IDENT
               {
                contVar++;
-               totalVar++;
-               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar-1)
+               totalVar[nivelLexico]++;
+               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar[nivelLexico]-1)
               }
             | IDENT
               {
                contVar++;
-               totalVar++;
-               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar-1)
+               totalVar[nivelLexico]++;
+               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar[nivelLexico]-1)
               }
 ;
 
@@ -134,6 +204,9 @@ lista_idents: lista_idents VIRGULA IDENT
             | IDENT
 ;
 
+////////////////////////////////////////////////////////////////
+// COMANDOS
+////////////////////////////////////////////////////////////////
 
 comando_composto: T_BEGIN comandos T_END
                 | comando
@@ -154,7 +227,33 @@ rotulo: NUMERO DOIS_PONTOS
 comando_sem_rotulo: regra_if
                   | regra_while
                   | IDENT {strcpy(elementoEsquerda, token);} regra_ident
+                  | READ ABRE_PARENTESES IDENT {strcpy(elementoEsquerda, token);} FECHA_PARENTESES
+                    {
+                     tSimboloTs* ss = buscaTS(elementoEsquerda);
+                     //Verifica se o símbolo buscado existe.
+                     if (ss)
+                     {
+                      if (ss->categoria == TS_CAT_VS)
+                      {
+                       char nl[TAM_TOKEN], ds[TAM_TOKEN];
+                       sprintf(nl, "%d", ss->nivel);
+                       sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
+                       geraCodigo(NULL, "LEIT", nl, ds, NULL);
+                      }
+                      else
+                      {
+                       char str[100];
+                       sprintf(str, "O token %s não é da categoria Variável Simples\n", token);
+                       imprimeErro(str);
+                      }
+                     }
+                    }
+                  | WRITE ABRE_PARENTESES lista_expressoes_write FECHA_PARENTESES
 ;
+
+////////////////////////////////////////////////////////////////
+// IF / IF THEN ELSE
+////////////////////////////////////////////////////////////////
 
 regra_if: IF expressao_completa THEN comando_composto talveztemelse
 ;
@@ -163,66 +262,120 @@ talveztemelse: PONTO_E_VIRGULA
              | ELSE comando_composto
 ;
 
+////////////////////////////////////////////////////////////////
+// WHILE
+////////////////////////////////////////////////////////////////
+
 regra_while: WHILE
     { //gera
     }
     expressao_completa DO comando_composto
 ;
 
-regra_ident: ATRIBUICAO variavel                                      //Atribuição.
+////////////////////////////////////////////////////////////////
+// REGRAS COM IDENTIFICADORES
+////////////////////////////////////////////////////////////////
+
+regra_ident: ATRIBUICAO expressao                                               //Atribuição.
+             {
+              tSimboloTs* ss = buscaTS(elementoEsquerda);
+              //Verifica se o símbolo buscado existe.
+              if (ss)
+              {
+               if (ss->categoria == TS_CAT_VS)
+               {
+                char nl[TAM_TOKEN], ds[TAM_TOKEN];
+                sprintf(nl, "%d", ss->nivel);
+                sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
+                geraCodigo(NULL, "LEIT", nl, ds, NULL);
+               }
+               else
+               {
+                char str[100];
+                sprintf(str, "O token %s não é da categoria Variável Simples\n", token);
+                imprimeErro(str);
+               }
+              }
+             }
            | ABRE_PARENTESES lista_idents FECHA_PARENTESES                      //Chamada Função ou procedimento.
 ;
 
-variavel: NUMERO
+variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
         | IDENT
+          {
+           tSimboloTs* ss = buscaTS(token);
+           //Verifica se o símbolo buscado existe.
+           if (ss)
+           {
+            if (ss->categoria == TS_CAT_VS)
+            {
+             char nl[TAM_TOKEN], ds[TAM_TOKEN];
+             sprintf(nl, "%d", ss->nivel);
+             sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
+             geraCodigo(NULL, "LEIT", nl, ds, NULL);
+            }
+            else
+            {
+             char str[100];
+             sprintf(str, "O token %s não é da categoria Variável Simples\n", token);
+             imprimeErro(str);
+            }
+           }
+          }
 ;
 
-expressao_completa: {printf("1\n");} expressao {printf("2\n");} expressao_completa2 {printf("3\n");}
+////////////////////////////////////////////////////////////////
+// EXPRESSÕES
+////////////////////////////////////////////////////////////////
+
+lista_expressoes_write: lista_expressoes_write VIRGULA expressao {geraCodigo(NULL, "IMPR", NULL, NULL, NULL);}
+                      | expressao {geraCodigo(NULL, "IMPR", NULL, NULL, NULL);}
 ;
 
-expressao_completa2: {printf("4\n");}compara {printf("5\n");} expressao {printf("6\n");}
-                   | {printf("7\n");}
+expressao_completa: expressao expressao_completa2
 ;
 
-expressao: {printf("8\n");} expressao {printf("9\n");} expressao2 {printf("10\n");}
-         | {printf("11\n");} termo {printf("12\n");}
+expressao_completa2: compara expressao
+                   |
+;
+
+expressao: termo expressao_intermediaria
          |
 ;
 
-expressao2: {printf("13\n");} MAIS {printf("14\n");} termo {printf("15\n");}
-          | {printf("16\n");} AND {printf("17\n");} termo {printf("18\n");}
+expressao_intermediaria: expressao2
+                       |
 ;
 
-termo: {printf("19\n");} termo {printf("20\n");} termo2 {printf("21\n");}
-     | {printf("22\n");} fator {printf("23\n");}
+expressao2: MAIS termo {geraCodigo(NULL, "SOMA", NULL, NULL, NULL);}
+          | MENOS termo {geraCodigo(NULL, "SUBT", NULL, NULL, NULL);}
+          | AND termo {geraCodigo(NULL, "CONJ", NULL, NULL, NULL);}
 ;
 
-termo2: {printf("24\n");} MULT {printf("25\n");} fator {printf("26\n");}
-      | {printf("27\n");} OR  {printf("28\n");} fator {printf("29\n");}
+termo: fator termo_intermediario
 ;
 
-fator: {printf("30\n");} variavel {printf("31\n");}
-     | {printf("32\n");} ABRE_PARENTESES {printf("33\n");} expressao {printf("34\n");} FECHA_PARENTESES {printf("35\n");}
+termo_intermediario: termo2
+                   |
+;
+
+termo2: MULT fator {geraCodigo(NULL, "MULT", NULL, NULL, NULL);}
+      | DIV fator {geraCodigo(NULL, "DIVI", NULL, NULL, NULL);}
+      | OR fator {geraCodigo(NULL, "DISJ", NULL, NULL, NULL);}
+;
+
+fator: variavel
+     | ABRE_PARENTESES expressao FECHA_PARENTESES
 ;
 
 compara: IGUAL | MENOR | MENOR_IGUAL | MAIOR | MAIOR_IGUAL | DIF
 ;
 
-%%
+////////////////////////////////////////////////////////////////
+// THANK YOU FOR WATCHING
+////////////////////////////////////////////////////////////////
 
-//Gera rótulo
-char* geraRotulo()
-{
- char* rot;
- rot = (char*)malloc(sizeof(char)*10);
- sprintf(rot, "R%5.0d", maxRotulo++);
- for (int i=0;i<9;++i)
- {
-  if (rot[i]==' ')
-   rot[i] = '0';
- }
- return rot;
-}
+%%
 
 int main (int argc, char** argv)
 {
@@ -247,13 +400,6 @@ int main (int argc, char** argv)
 
    yyin=fp;
    yyparse();
-
-   printf("\n\nTABELA DE SÍMBOLOS\n");
-   for (node n=list_first(TS); n; n=list_next(n))
-   {
-    tSimboloTs* t = list_value(n);
-    imprimeSimboloTS(t);
-   }
 
    return 0;
 }
