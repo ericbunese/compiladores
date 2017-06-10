@@ -132,14 +132,12 @@ void atualizaSimboloTS_PF(tSimboloTs* s, int deslocamento, int tipoPassagem)
  else printf("Catástrofe detectada:\nTentando atualizar simbolo TS do tipo PF porém a categoria é %d\n\n", s->categoria);
 }
 
-void atualizaSimboloTS_CP(tSimboloTs* s, char* rotulo, int nivel, int nParams, int* tipoPassagem)
+void atualizaSimboloTS_CP(tSimboloTs* s, int* tipoPassagem)
 {
  if (s->categoria==TS_CAT_CP)
  {
-  s->categoriaTs.c = (tCpTs*)malloc(sizeof(tCpTs));
-  s->categoriaTs.c->rotulo = rotulo;
-  s->categoriaTs.c->nivel = nivel;
-  s->categoriaTs.c->nParams = nParams;
+  if (s->categoriaTs.c->tipoPassagem)
+      free(s->categoriaTs.c->tipoPassagem);
   s->categoriaTs.c->tipoPassagem = tipoPassagem;
  }
  else printf("Catástrofe detectada:\nTentando atualizar simbolo TS do tipo CP porém a categoria é %d\n\n", s->categoria);

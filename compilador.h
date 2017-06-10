@@ -104,7 +104,7 @@ tSimboloTs* criaSimboloTS_CP(char* rot, int nivel, char* rotulo_chamada, char* r
 
 void atualizaSimboloTS_VS(tSimboloTs* s, int tipo);
 void atualizaSimboloTS_PF(tSimboloTs* s, int deslocamento, int tipoPassagem);
-void atualizaSimboloTS_CP(tSimboloTs* s, char* rotulo, int nivel, int nParams, int* tipoPassagem);
+void atualizaSimboloTS_CP(tSimboloTs* s, int* tipoPassagem);
 
 int insereTS(tSimboloTs* s);
 tSimboloTs* buscaTS(char* rot);

@@ -1,6 +1,6 @@
 $DEPURA=1
 
-compilador: lex.yy.c y.tab.c compilador.o compilador.h
+compilador: lex.yy.c y.tab.c compilador.o compilador.h list.o
 	gcc lex.yy.c compilador.tab.c compilador.o list.o -o compilador -ll -ly -lc
 
 lex.yy.c: compilador.l compilador.h

@@ -18,7 +18,7 @@ char elementoEsquerda[TAM_TOKEN];
 //TS: Tabela de Símbolos.
 list TS;
 
-list pilhona = list_new();
+list pilhona;
 
 %}
 
@@ -47,12 +47,15 @@ bloco       : {totalVar[nivelLexico] = 0}
               parte_declara_coisas
               comando_composto
               {
+               //Desaloca variáveis locais do bloco.
                if (totalVar[nivelLexico]>0)
                {
                 char str[TAM_TOKEN];
                 sprintf(str, "%d", totalVar[nivelLexico]);
                 geraCodigo(NULL, "DMEM", str, NULL, NULL);
                }
+               //Remove funções e procedimentos deste nível léxico da TS:
+
               }
 ;
 
@@ -72,20 +75,26 @@ parte_declara_procedures: PROCEDURE declara_procedure
 
 declara_procedure: IDENT
                    {
-                    strcpy(elementoEsquerda, token);
+                    //strcpy(elementoEsquerda, token);
                     char rotulo[10], rotuloSaida[10];
                     strcpy(rotuloSaida, geraRotulo());
                     strcpy(rotulo, geraRotulo());
                     char str[TAM_TOKEN];
                     sprintf(str, "%d", nivelLexico);
-                    criaSimboloTS_CP(token, nivelLexico, rotulo, rotuloSaida);
+                    tSimboloTs* ss = criaSimboloTS_CP(token, nivelLexico, rotulo, rotuloSaida);
+                    //Empilha o símbolo na pilhona, assim fica mais fácil acessar...
+                    list_push(ss, pilhona);
+                    //Empilha o vetor de tipo de passagem de parâmetros
+                    int* params=(int*)malloc(sizeof(int));
+                    list_push(params, pilhona);
                     geraCodigo(NULL, "DSVS", rotuloSaida, NULL, NULL);
                     geraCodigo(rotulo, "ENPR", str, NULL, NULL);
                    }
                    ABRE_PARENTESES {contVar = 0;} lista_id_parametros
                    {
                     //atualiza nParams na TS.
-                    tSimboloTs* ss = buscaTS(elementoEsquerda);
+                    node n = list_next(list_first(pilhona));
+                    tSimboloTs* ss = list_value(n);
                     if (ss)
                     {
                      if (ss->categoria == TS_CAT_CP)
@@ -99,20 +108,26 @@ declara_procedure: IDENT
                    }
                    bloco
                    {
-                    imprimeTS();
-                    tSimboloTs* ss = buscaTS(elementoEsquerda);
+                    node p = list_pop(pilhona);
+                    node n = list_pop(pilhona);
+                    int* params;
+                    params = list_value(p);
+                    tSimboloTs* ss = list_value(n);
                     if (ss)
                     {
                      if (ss->categoria == TS_CAT_CP)
                      {
                       char str1[TAM_TOKEN], str2[TAM_TOKEN];
+                      removeTS(totalVar[nivelLexico]);
                       nivelLexico--;
                       sprintf(str1, "%d", nivelLexico);
                       sprintf(str2, "%d", ss->categoriaTs.c->nParams);
+                      atualizaSimboloTS_CP(ss, params);
                       geraCodigo(NULL, "RTPR", str1, str2, NULL);
                       geraCodigo(ss->categoriaTs.c->rotulo_saida, "NADA", NULL, NULL, NULL);
                      }
                     }
+                    imprimeTS();
                    }
 ;
 
@@ -122,13 +137,37 @@ parte_declara_functions: FUNCTION declara_function
 declara_function: IDENT ABRE_PARENTESES lista_id_parametros FECHA_PARENTESES DOIS_PONTOS tipo PONTO_E_VIRGULA bloco
 ;
 
-lista_id_parametros: lista_id_parametros VIRGULA parametros {contVar++;}
-                   | parametros {contVar++;}
+lista_id_parametros: lista_id_parametros VIRGULA parametros
+                     {
+                      node p = list_first(pilhona);
+                      int* params = list_value(p);
+                      params = (int*)realloc(params, (1+contVar)*sizeof(int));
+                      contVar++;
+                     }
+                   | parametros
+                     {
+                      node p = list_first(pilhona);
+                      int* params = list_value(p);
+                      params = (int*)realloc(params, (1+contVar)*sizeof(int));
+                      contVar++;
+                     }
                    |
 ;
 
 parametros: IDENT DOIS_PONTOS tipo
+            {
+             node p = list_first(pilhona);
+             int* params;
+             params = list_value(p);
+             params[contVar] = TS_PAR_VAL;
+            }
           | VAR IDENT DOIS_PONTOS tipo
+            {
+             node p = list_first(pilhona);
+             int* params;
+             params = list_value(p);
+             params[contVar] = TS_PAR_REF;
+            }
 ;
 
 ////////////////////////////////////////////////////////////////
@@ -238,7 +277,8 @@ comando_sem_rotulo: regra_if
                        char nl[TAM_TOKEN], ds[TAM_TOKEN];
                        sprintf(nl, "%d", ss->nivel);
                        sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
-                       geraCodigo(NULL, "LEIT", nl, ds, NULL);
+                       geraCodigo(NULL, "LEIT", NULL, NULL, NULL);
+                       geraCodigo(NULL, "ARMZ", nl, ds, NULL);
                       }
                       else
                       {
@@ -250,16 +290,61 @@ comando_sem_rotulo: regra_if
                     }
                   | WRITE ABRE_PARENTESES lista_expressoes_write FECHA_PARENTESES
 ;
-
 ////////////////////////////////////////////////////////////////
 // IF / IF THEN ELSE
 ////////////////////////////////////////////////////////////////
 
-regra_if: IF expressao_completa THEN comando_composto talveztemelse
+regra_if: IF
+          {
+           char* rotulo_else;
+           rotulo_else = geraRotulo();
+           char* rotulo_saida;
+           rotulo_saida = geraRotulo();
+           list_push(rotulo_saida, pilhona);
+           list_push(rotulo_else, pilhona);
+          }
+          ABRE_PARENTESES
+          expressao_completa
+          FECHA_PARENTESES
+          THEN
+          {
+           node e = list_first(pilhona);
+           char* rotulo_else = list_value(e);
+           geraCodigo(NULL, "DSVF", rotulo_else, NULL, NULL);
+          }
+          comando_composto
+          {
+           node s = list_next(list_first(pilhona));
+           char* rotulo_saida = list_value(s);
+           node e = list_first(pilhona);
+           char* rotulo_else = list_value(e);
+           geraCodigo(NULL, "DSVS", rotulo_saida, NULL, NULL);
+          }
+          talveztemelse
 ;
 
 talveztemelse: PONTO_E_VIRGULA
-             | ELSE comando_composto
+               {
+                node e = list_pop(pilhona);
+                node s = list_pop(pilhona);
+                char *rotulo_saida = list_value(s);
+                char *rotulo_else = list_value(e);
+                geraCodigo(rotulo_else, "NADA", NULL, NULL, NULL);
+                geraCodigo(NULL, "DSVS", rotulo_saida, NULL, NULL);
+                geraCodigo(rotulo_saida, "NADA", NULL, NULL, NULL);
+               }
+             | ELSE
+               {
+                node e = list_pop(pilhona);
+                char *rotulo_else = list_value(e);
+                geraCodigo(rotulo_else, "NADA", NULL, NULL, NULL);
+               }
+               comando_composto
+               {
+                node s = list_pop(pilhona);
+                char *rotulo_saida = list_value(s);
+                geraCodigo(rotulo_saida, "NADA", NULL, NULL, NULL);
+               }
 ;
 
 ////////////////////////////////////////////////////////////////
@@ -267,9 +352,33 @@ talveztemelse: PONTO_E_VIRGULA
 ////////////////////////////////////////////////////////////////
 
 regra_while: WHILE
-    { //gera
+    {
+     char* rotulo_saida;
+     rotulo_saida = geraRotulo();
+     char* rotulo_entrada;
+     rotulo_entrada = geraRotulo();
+     list_push(rotulo_entrada, pilhona);
+     list_push(rotulo_saida, pilhona);
+     geraCodigo(rotulo_entrada, "NADA", NULL, NULL, NULL);
     }
-    expressao_completa DO comando_composto
+    ABRE_PARENTESES
+    expressao_completa
+    FECHA_PARENTESES
+    DO
+    {
+     node s = list_first(pilhona);
+     char* rotulo_saida = list_value(s);
+     geraCodigo(NULL, "DSVF", rotulo_saida, NULL, NULL);
+    }
+    comando_composto
+    {
+     node s = list_pop(pilhona);
+     char* rotulo_saida = list_value(s);
+     node e = list_pop(pilhona);
+     char* rotulo_entrada = list_value(e);
+     geraCodigo(NULL, "DSVS", rotulo_entrada, NULL, NULL);
+     geraCodigo(rotulo_saida, "NADA", NULL, NULL, NULL);
+    }
 ;
 
 ////////////////////////////////////////////////////////////////
@@ -287,7 +396,7 @@ regra_ident: ATRIBUICAO expressao                                               
                 char nl[TAM_TOKEN], ds[TAM_TOKEN];
                 sprintf(nl, "%d", ss->nivel);
                 sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
-                geraCodigo(NULL, "LEIT", nl, ds, NULL);
+                geraCodigo(NULL, "ARMZ", nl, ds, NULL);
                }
                else
                {
@@ -312,7 +421,7 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
              char nl[TAM_TOKEN], ds[TAM_TOKEN];
              sprintf(nl, "%d", ss->nivel);
              sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
-             geraCodigo(NULL, "LEIT", nl, ds, NULL);
+             geraCodigo(NULL, "CRVL", nl, ds, NULL);
             }
             else
             {
@@ -336,11 +445,21 @@ expressao_completa: expressao expressao_completa2
 ;
 
 expressao_completa2: compara expressao
+                     {
+                      node n = list_pop(pilhona);
+                      char* func = list_value(n);
+                      geraCodigo(NULL, func, NULL, NULL, NULL);
+                     }
                    |
 ;
 
-expressao: termo expressao_intermediaria
-         |
+expressao: termo expressao_intermediaria expressao_intermediaria2
+         | expressao_intermediaria2
+;
+
+expressao_intermediaria2: expressao2 expressao
+                        | termo2 expressao
+                        | 
 ;
 
 expressao_intermediaria: expressao2
@@ -368,7 +487,9 @@ fator: variavel
      | ABRE_PARENTESES expressao FECHA_PARENTESES
 ;
 
-compara: IGUAL | MENOR | MENOR_IGUAL | MAIOR | MAIOR_IGUAL | DIF
+compara: IGUAL {list_push("CMIG", pilhona);} | MENOR {list_push("CMME", pilhona);}
+       | MENOR_IGUAL {list_push("CMEG", pilhona);} | MAIOR {list_push("CMMA", pilhona);}
+       | MAIOR_IGUAL {list_push("CMAG", pilhona);} | DIF {list_push("CMDG", pilhona);}
 ;
 
 ////////////////////////////////////////////////////////////////
@@ -397,6 +518,7 @@ int main (int argc, char** argv)
 
    //Cria a tabela de símbolos.
    TS = criaTS();
+   pilhona = list_new();
 
    yyin=fp;
    yyparse();
