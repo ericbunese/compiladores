@@ -386,10 +386,10 @@ comando_sem_rotulo: regra_if
                   | IDENT {strcpy(elementoEsquerda, token);} regra_ident
                   | READ ABRE_PARENTESES lista_ids_read FECHA_PARENTESES
                   | WRITE ABRE_PARENTESES lista_expressoes_write FECHA_PARENTESES
-                  | ABRE_PARENTESES ASTERISCO regra_comentario
+                  | ABRE_PARENTESES MAIS regra_comentario
 ;
 
-regra_comentario: ASTERISCO FECHA_PARENTESES
+regra_comentario: MAIS FECHA_PARENTESES
 ;
 
 lista_ids_read: IDENT
