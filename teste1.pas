@@ -1,13 +1,11 @@
 program exemplo75 (input, output);
 var a:integer;
-procedure p(b:integer, c:integer);
-procedure q();
+var b:integer;
+	function add1(var b:integer):integer;
+	begin
+		add1:=b+1
+	end;
 begin
-	write(0)
-end
-begin
-	write(b)
-end
-begin
-	p(a)
+	a:=0;
+	write(add1(a))
 end.

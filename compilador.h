@@ -20,6 +20,8 @@
 #define TS_CAT_PF 1
 //Categoria da tabela de símbolos: Procedimento
 #define TS_CAT_CP 2
+//Categoria da tabela de símbolos: Função
+#define TS_CAT_FU 3
 //Tipo Integer
 #define TS_TIP_INT 0
 //Tipo Boolean
@@ -63,6 +65,17 @@ typedef struct cpTs
  int* tipoPassagem;
 }tCpTs;
 
+//Campos da tabela de símbolos para chamada de função
+typedef struct fuTs
+{
+ char* rotulo;
+ char* rotulo_saida;
+ int nivel;
+ int nParams;
+ int* tipoPassagem;
+ int deslocamento;
+}tFuTs;
+
 typedef struct simboloTs
 {
  char* ident;
@@ -73,6 +86,7 @@ typedef struct simboloTs
   tVsTs* v;
   tPfTs* p;
   tCpTs* c;
+  tFuTs* f;
  }categoriaTs;
 }tSimboloTs;
 
@@ -101,11 +115,13 @@ void imprimeSimboloTS(tSimboloTs* t);
 tSimboloTs* criaSimboloTS(char* rot, int categoria, int nivel);
 tSimboloTs* criaSimboloTS_VS(char *rot, int categoria, int nivel, int deslocamento);
 tSimboloTs* criaSimboloTS_CP(char* rot, int nivel, char* rotulo_chamada, char* rotulo_saida);
+tSimboloTs* criaSimboloTS_FU(char* rot, int nivel, char* rotulo_chamada, char* rotulo_saida);
 tSimboloTs* criaSimboloTS_PF(char* rot, int nivel);
 
 void atualizaSimboloTS_VS(tSimboloTs* s, int tipo);
 void atualizaSimboloTS_PF(tSimboloTs* s, int deslocamento);
 void atualizaSimboloTS_CP(tSimboloTs* s, int* tipoPassagem);
+void atualizaSimboloTS_FU(tSimboloTs* s, int* tipoPassagem, int deslocamento);
 
 int insereTS(tSimboloTs* s);
 tSimboloTs* buscaTS(char* rot);
@@ -118,3 +134,7 @@ char *tipoPassagemTS(int tipo);
 
 char* geraRotulo();
 void imprimeTS();
+
+void chamaFuncao(char* token);
+void chamaProcedimento(char *token);
+void empilhaTipoPassagemParametro();

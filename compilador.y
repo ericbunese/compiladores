@@ -19,6 +19,8 @@ char elementoEsquerda[TAM_TOKEN];
 list TS;
 //parametroAtual: indica qual a posição do parametro atual.
 int parametroAtual;
+//ehPassagemParametro: indica se a variável lida deve ser considerada como passagem de parâmetro.
+int ehPassagemParametro;
 
 list pilhona;
 list parametros;
@@ -48,7 +50,8 @@ programa    :{
 
 bloco       : {totalVar[nivelLexico] = 0}
               parte_declara_coisas
-              comando_composto
+              T_BEGIN
+              comandos
               {
                //Desaloca variáveis locais do bloco.
                if (totalVar[nivelLexico]>0)
@@ -60,6 +63,7 @@ bloco       : {totalVar[nivelLexico] = 0}
                //Remove funções e procedimentos deste nível léxico da TS:
 
               }
+              T_END
 ;
 
 parte_declara_coisas: parte_declara_coisas parte_declara_vars
@@ -78,7 +82,6 @@ parte_declara_procedures: PROCEDURE declara_procedure
 
 declara_procedure: IDENT
                    {
-                    //strcpy(elementoEsquerda, token);
                     char rotulo[10], rotuloSaida[10];
                     strcpy(rotuloSaida, geraRotulo());
                     strcpy(rotulo, geraRotulo());
@@ -122,13 +125,25 @@ declara_procedure: IDENT
                       np--;
                      }
                     }
-                   } FECHA_PARENTESES PONTO_E_VIRGULA
-                   bloco
+                   }
+                   FECHA_PARENTESES PONTO_E_VIRGULA
                    {
                     node p = list_pop(pilhona);
-                    node n = list_pop(pilhona);
+                    node n = list_first(pilhona);
                     int* params;
                     params = list_value(p);
+                    tSimboloTs* ss = list_value(n);
+                    if (ss)
+                    {
+                     if (ss->categoria == TS_CAT_CP)
+                     {
+                      atualizaSimboloTS_CP(ss, params);
+                     }
+                    }
+                   }
+                   bloco
+                   {
+                    node n = list_pop(pilhona);
                     tSimboloTs* ss = list_value(n);
                     if (ss)
                     {
@@ -139,19 +154,99 @@ declara_procedure: IDENT
                       nivelLexico--;
                       sprintf(str1, "%d", nivelLexico);
                       sprintf(str2, "%d", ss->categoriaTs.c->nParams);
-                      atualizaSimboloTS_CP(ss, params);
                       geraCodigo(NULL, "RTPR", str1, str2, NULL);
                       geraCodigo(ss->categoriaTs.c->rotulo_saida, "NADA", NULL, NULL, NULL);
                      }
                     }
                     imprimeTS();
                    }
+                   PONTO_E_VIRGULA
 ;
 
 parte_declara_functions: FUNCTION declara_function
 ;
 
-declara_function: IDENT ABRE_PARENTESES {} lista_id_parametros FECHA_PARENTESES DOIS_PONTOS tipo PONTO_E_VIRGULA bloco
+declara_function: IDENT
+                  {
+                   char rotulo[10], rotuloSaida[10];
+                   strcpy(rotuloSaida, geraRotulo());
+                   strcpy(rotulo, geraRotulo());
+                   char str[TAM_TOKEN];
+                   sprintf(str, "%d", nivelLexico);
+                   tSimboloTs* ss = criaSimboloTS_FU(token, nivelLexico, rotulo, rotuloSaida);
+                   //Empilha o símbolo na pilhona, assim fica mais fácil acessar...
+                   list_push(ss, pilhona);
+                   //Empilha o vetor de tipo de passagem de parâmetros
+                   int* params=(int*)malloc(sizeof(int));
+                   list_push(params, pilhona);
+                   geraCodigo(NULL, "DSVS", rotuloSaida, NULL, NULL);
+                   geraCodigo(rotulo, "ENPR", str, NULL, NULL);
+                  }
+                  ABRE_PARENTESES { contVar = 0; nivelLexico++; } lista_id_parametros
+                  {
+                   //atualiza nParams na TS.
+                   node n = list_next(list_first(pilhona));
+                   tSimboloTs* ss = list_value(n);
+                   if (ss)
+                   {
+                    if (ss->categoria == TS_CAT_FU)
+                    {
+                     ss->categoriaTs.f->nParams = contVar;
+                    }
+                   }
+                   //Agora atualiza os símbolos de parâmetros com seus deslocamentos.
+                   node c = list_next(list_first(pilhona));
+                   tSimboloTs* sp = list_value(c);
+                   if (sp && sp->categoria == TS_CAT_FU)
+                   {
+                    int np = sp->categoriaTs.f->nParams, i=-4;
+                    while(np>0)
+                    {
+                     node n = list_pop(parametros);
+                     tSimboloTs* ss = list_value(n);
+                     if (ss && ss->categoria == TS_CAT_PF)
+                     {
+                      ss->categoriaTs.p->deslocamento = i--;
+                     }
+                     np--;
+                    }
+                   }
+                  }
+                  FECHA_PARENTESES DOIS_PONTOS tipo PONTO_E_VIRGULA
+                  {
+                   node p = list_pop(pilhona);
+                   node n = list_first(pilhona);
+                   int* params;
+                   params = list_value(p);
+                   tSimboloTs* ss = list_value(n);
+                   if (ss)
+                   {
+                    if (ss->categoria == TS_CAT_FU)
+                    {
+                     atualizaSimboloTS_FU(ss, params, ss->categoriaTs.f->nParams*-1-4);
+                    }
+                   }
+                  }
+                  bloco
+                  {
+                   node n = list_pop(pilhona);
+                   tSimboloTs* ss = list_value(n);
+                   if (ss)
+                   {
+                    if (ss->categoria == TS_CAT_FU)
+                    {
+                     char str1[TAM_TOKEN], str2[TAM_TOKEN];
+                     removeTS(totalVar[nivelLexico]);
+                     nivelLexico--;
+                     sprintf(str1, "%d", nivelLexico);
+                     sprintf(str2, "%d", ss->categoriaTs.f->nParams);
+                     geraCodigo(NULL, "RTPR", str1, str2, NULL);
+                     geraCodigo(ss->categoriaTs.f->rotulo_saida, "NADA", NULL, NULL, NULL);
+                    }
+                   }
+                   imprimeTS();
+                  }
+                  PONTO_E_VIRGULA
 ;
 
 lista_id_parametros: lista_id_parametros VIRGULA parametros
@@ -289,30 +384,60 @@ rotulo: NUMERO DOIS_PONTOS
 comando_sem_rotulo: regra_if
                   | regra_while
                   | IDENT {strcpy(elementoEsquerda, token);} regra_ident
-                  | READ ABRE_PARENTESES IDENT {strcpy(elementoEsquerda, token);} FECHA_PARENTESES
-                    {
-                     tSimboloTs* ss = buscaTS(elementoEsquerda);
-                     //Verifica se o símbolo buscado existe.
-                     if (ss)
-                     {
-                      if (ss->categoria == TS_CAT_VS)
-                      {
-                       char nl[TAM_TOKEN], ds[TAM_TOKEN];
-                       sprintf(nl, "%d", ss->nivel);
-                       sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
-                       geraCodigo(NULL, "LEIT", NULL, NULL, NULL);
-                       geraCodigo(NULL, "ARMZ", nl, ds, NULL);
-                      }
-                      else
-                      {
-                       char str[100];
-                       sprintf(str, "O token %s não é de categoria válida\n", token);
-                       imprimeErro(str);
-                      }
-                     }
-                    }
+                  | READ ABRE_PARENTESES lista_ids_read FECHA_PARENTESES
                   | WRITE ABRE_PARENTESES lista_expressoes_write FECHA_PARENTESES
+                  | ABRE_PARENTESES ASTERISCO regra_comentario
 ;
+
+regra_comentario: ASTERISCO FECHA_PARENTESES
+;
+
+lista_ids_read: IDENT
+                 {
+                  tSimboloTs* ss = buscaTS(token);
+                  //Verifica se o símbolo buscado existe.
+                  if (ss)
+                  {
+                   if (ss->categoria == TS_CAT_VS)
+                   {
+                    char nl[TAM_TOKEN], ds[TAM_TOKEN];
+                    sprintf(nl, "%d", ss->nivel);
+                    sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
+                    geraCodigo(NULL, "LEIT", NULL, NULL, NULL);
+                    geraCodigo(NULL, "ARMZ", nl, ds, NULL);
+                   }
+                   else
+                   {
+                    char str[100];
+                    sprintf(str, "O token %s não é de categoria válida\n", token);
+                    imprimeErro(str);
+                   }
+                  }
+                 }
+                |
+                 lista_ids_read VIRGULA IDENT
+                 {
+                  tSimboloTs* ss = buscaTS(token);
+                  //Verifica se o símbolo buscado existe.
+                  if (ss)
+                  {
+                   if (ss->categoria == TS_CAT_VS)
+                   {
+                    char nl[TAM_TOKEN], ds[TAM_TOKEN];
+                    sprintf(nl, "%d", ss->nivel);
+                    sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
+                    geraCodigo(NULL, "LEIT", NULL, NULL, NULL);
+                    geraCodigo(NULL, "ARMZ", nl, ds, NULL);
+                   }
+                   else
+                   {
+                    char str[100];
+                    sprintf(str, "O token %s não é de categoria válida\n", token);
+                    imprimeErro(str);
+                   }
+                  }
+                 }
+
 ////////////////////////////////////////////////////////////////
 // IF / IF THEN ELSE
 ////////////////////////////////////////////////////////////////
@@ -423,20 +548,27 @@ regra_ident: ATRIBUICAO expressao                                               
                }
                else if (ss->categoria == TS_CAT_PF)
                {
-                if (ss->categoriaTs.p->tipoPassagem == TS_PAR_VAL)              //Escrita em PF - valor
+                if (ss->categoriaTs.p->tipoPassagem == TS_PAR_VAL)              //Escrita em PF - valor.
                 {
                  char nl[TAM_TOKEN], ds[TAM_TOKEN];
                  sprintf(nl, "%d", ss->nivel);
                  sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
                  geraCodigo(NULL, "ARMZ", nl, ds, NULL);
                 }
-                else if (ss->categoriaTs.p->tipoPassagem == TS_PAR_REF)         //Escrita em PF - referência
+                else if (ss->categoriaTs.p->tipoPassagem == TS_PAR_REF)         //Escrita em PF - referência.
                 {
                  char nl[TAM_TOKEN], ds[TAM_TOKEN];
                  sprintf(nl, "%d", ss->nivel);
                  sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
                  geraCodigo(NULL, "ARMI", nl, ds, NULL);
                 }
+               }
+               else if (ss->categoria == TS_CAT_FU)                             //Escrita em valor de retorno de Função.
+               {
+                char nl[TAM_TOKEN], ds[TAM_TOKEN];
+                sprintf(nl, "%d", ss->nivel+1);
+                sprintf(ds, "%d", ss->categoriaTs.f->deslocamento);
+                geraCodigo(NULL, "ARMZ", nl, ds, NULL);
                }
                else
                {
@@ -453,9 +585,11 @@ regra_ident: ATRIBUICAO expressao                                               
               {
                if (ss->categoria == TS_CAT_CP)
                {
-                char nl[TAM_TOKEN];
-                sprintf(nl, "%d", nivelLexico);
-                geraCodigo(NULL, "CHPR", ss->categoriaTs.c->rotulo, nl, NULL);
+                chamaProcedimento(elementoEsquerda);
+               }
+               else if (ss->categoria == TS_CAT_FU)
+               {
+                chamaFuncao(elementoEsquerda);
                }
                else
                {
@@ -468,9 +602,44 @@ regra_ident: ATRIBUICAO expressao                                               
 ;
 
 variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
-        | IDENT
+        | IDENT { char str[TAM_TOKEN]; strcpy(str, token); list_push(str, pilhona); } variavel2
+;
+
+variavel2: ABRE_PARENTESES { parametroAtual=0; } lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
+           {
+            node n = list_pop(pilhona);
+            char *tok = list_value(n);
+            printf("O SIMBOLO É %s\n", tok);
+            tSimboloTs* ss = buscaTS(tok);
+            if (ss)
+            {
+             if (ss->categoria == TS_CAT_CP)
+             {
+              chamaProcedimento(elementoEsquerda);
+             }
+             else if (ss->categoria == TS_CAT_FU)
+             {
+              chamaFuncao(elementoEsquerda);
+             }
+             else
+             {
+              char str[100];
+              sprintf(str, "O token %s não é da categoria correta\n", token);
+              imprimeErro(str);
+             }
+            }
+            else
+            {
+             char *erro = "Símbolo não encontrado.\n";
+             imprimeErro(erro);
+            }
+           }
+         |
           {
-           tSimboloTs* ss = buscaTS(token);
+           node n = list_pop(pilhona);
+           char *tok = list_value(n);
+           printf("BUSCA POR %s\n", tok);
+           tSimboloTs* ss = buscaTS(tok);
            //Verifica se o símbolo buscado existe.
            if (ss)
            {
@@ -479,7 +648,20 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
              char nl[TAM_TOKEN], ds[TAM_TOKEN];
              sprintf(nl, "%d", ss->nivel);
              sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
-             geraCodigo(NULL, "CRVL", nl, ds, NULL);
+             if (ehPassagemParametro)
+             {
+              node n = list_pop(parametros);
+              int *tipop = list_value(n);
+              if (tipop[parametroAtual] == TS_PAR_VAL)
+              {
+               geraCodigo(NULL, "CRVL", nl, ds, NULL);
+              }
+              else if (tipop[parametroAtual] == TS_PAR_REF)
+              {
+               geraCodigo(NULL, "CREN", nl, ds, NULL);
+              }
+             }
+             else geraCodigo(NULL, "CRVL", nl, ds, NULL);
             }
             else if (ss->categoria == TS_CAT_PF)
             {
@@ -488,14 +670,40 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
               char nl[TAM_TOKEN], ds[TAM_TOKEN];
               sprintf(nl, "%d", ss->nivel);
               sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
-              geraCodigo(NULL, "CRVL", nl, ds, NULL);
+              if (ehPassagemParametro)
+              {
+               node n = list_pop(parametros);
+               int* tipop = list_value(n);
+               if (tipop[parametroAtual] == TS_PAR_VAL)
+               {
+                geraCodigo(NULL, "CRVL", nl, ds, NULL);
+               }
+               else if (tipop[parametroAtual] == TS_PAR_REF)
+               {
+                geraCodigo(NULL, "CREN", nl, ds, NULL);
+               }
+              }
+              else geraCodigo(NULL, "CRVL", nl, ds, NULL);
              }
              else if (ss->categoriaTs.p->tipoPassagem == TS_PAR_REF)            //Leitura em PF - Referência
              {
               char nl[TAM_TOKEN], ds[TAM_TOKEN];
               sprintf(nl, "%d", ss->nivel);
               sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
-              geraCodigo(NULL, "CRVI", nl, ds, NULL);
+              if (ehPassagemParametro)
+              {
+               node n = list_pop(parametros);
+               int *tipop = list_value(n);
+               if (tipop[parametroAtual] == TS_PAR_VAL)
+               {
+                geraCodigo(NULL, "CRVI", nl, ds, NULL);
+               }
+               else if (tipop[parametroAtual] == TS_PAR_REF)
+               {
+                geraCodigo(NULL, "CRVL", nl, ds, NULL);
+               }
+              }
+              else geraCodigo(NULL, "CRVI", nl, ds, NULL);
              }
             }
             else
@@ -506,7 +714,6 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
             }
            }
           }
-;
 
 ////////////////////////////////////////////////////////////////
 // EXPRESSÕES
@@ -514,21 +721,14 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
 
 lista_expressoes_call: lista_expressoes_call VIRGULA
                        {
-                        tSimboloTs* ss = buscaTS(elementoEsquerda);
-                        if (ss)
-                        {
-                         if (ss->categoria == TS_CAT_CP)
-                         {
-                          
-                         }
-                        }
+                        empilhaTipoPassagemParametro();
                        }
-                       expressao { parametroAtual++; }
+                       expressao { parametroAtual++; ehPassagemParametro=0; }
                     |
                        {
-
+                        empilhaTipoPassagemParametro();
                        }
-                       expressao { parametroAtual++; }
+                       expressao { parametroAtual++; ehPassagemParametro=0; }
 
 lista_expressoes_write: lista_expressoes_write VIRGULA expressao {geraCodigo(NULL, "IMPR", NULL, NULL, NULL);}
                       | expressao {geraCodigo(NULL, "IMPR", NULL, NULL, NULL);}
@@ -590,6 +790,54 @@ compara: IGUAL {list_push("CMIG", pilhona);} | MENOR {list_push("CMME", pilhona)
 ////////////////////////////////////////////////////////////////
 
 %%
+void chamaFuncao(char *token)
+{
+ tSimboloTs* ss = buscaTS(token);
+ if (ss)
+ {
+  if (ss->categoria == TS_CAT_FU)
+  {
+   char str[TAM_TOKEN];
+   sprintf(str, "%d", nivelLexico);
+   geraCodigo(NULL, "AMEM 1", NULL, NULL, NULL);
+   geraCodigo(NULL, "CHPR", ss->categoriaTs.f->rotulo, str, NULL);
+  }
+ }
+}
+
+void chamaProcedimento(char *token)
+{
+ tSimboloTs* ss = buscaTS(token);
+ if (ss)
+ {
+  if (ss->categoria == TS_CAT_FU)
+  {
+   char str[TAM_TOKEN];
+   sprintf(str, "%d", nivelLexico);
+   geraCodigo(NULL, "CHPR", ss->categoriaTs.c->rotulo, str, NULL);
+  }
+ }
+}
+
+void empilhaTipoPassagemParametro()
+{
+ int* params;
+ tSimboloTs* ss = buscaTS(elementoEsquerda);
+ if (ss)
+ {
+  if (ss->categoria == TS_CAT_CP)                        //PROCEDURE
+  {
+   params = ss->categoriaTs.c->tipoPassagem;
+  }
+  else if (ss->categoria == TS_CAT_FU)                   //FUNCTION
+  {
+   params = ss->categoriaTs.f->tipoPassagem;
+  }
+  list_push(params, parametros);
+  ehPassagemParametro = 1;
+ }
+}
+
 
 int main (int argc, char** argv)
 {
@@ -613,6 +861,7 @@ int main (int argc, char** argv)
    TS = criaTS();
    pilhona = list_new();
    parametros = list_new();
+   ehPassagemParametro = 0;
 
    yyin=fp;
    yyparse();
