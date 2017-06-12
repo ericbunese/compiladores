@@ -578,9 +578,11 @@ regra_ident: ATRIBUICAO expressao                                               
                }
               }
              }
-           | ABRE_PARENTESES { parametroAtual=0; } lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
+           | ABRE_PARENTESES { parametroAtual=0; char str[100]; strcpy(str, elementoEsquerda); list_push(str, pilhona); } lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
              {
-              tSimboloTs* ss = buscaTS(elementoEsquerda);
+              node n = list_pop(pilhona);
+              char *tok = list_value(n);
+              tSimboloTs* ss = buscaTS(tok);
               if (ss)
               {
                if (ss->categoria == TS_CAT_CP)
@@ -594,7 +596,7 @@ regra_ident: ATRIBUICAO expressao                                               
                else
                {
                 char str[100];
-                sprintf(str, "O token %s não é da categoria correta\n", token);
+                sprintf(str, "O token '%s' não é da categoria correta\n", tok);
                 imprimeErro(str);
                }
               }
@@ -608,8 +610,9 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
 variavel2: ABRE_PARENTESES { parametroAtual=0; } lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
            {
             node n = list_pop(pilhona);
+            printf(".%p\n", n);
             char *tok = list_value(n);
-            printf("O SIMBOLO É %s\n", tok);
+            printf("->%s\n", tok);
             tSimboloTs* ss = buscaTS(tok);
             if (ss)
             {
@@ -624,7 +627,7 @@ variavel2: ABRE_PARENTESES { parametroAtual=0; } lista_expressoes_call FECHA_PAR
              else
              {
               char str[100];
-              sprintf(str, "O token %s não é da categoria correta\n", token);
+              sprintf(str, "O token '%s' não é da categoria correta\n", tok);
               imprimeErro(str);
              }
             }
@@ -637,9 +640,10 @@ variavel2: ABRE_PARENTESES { parametroAtual=0; } lista_expressoes_call FECHA_PAR
          |
           {
            node n = list_pop(pilhona);
+           printf("-%p\n", n);
            char *tok = list_value(n);
-           printf("BUSCA POR %s\n", tok);
            tSimboloTs* ss = buscaTS(tok);
+           printf(">-%s\n", tok);
            //Verifica se o símbolo buscado existe.
            if (ss)
            {
@@ -822,7 +826,10 @@ void chamaProcedimento(char *token)
 void empilhaTipoPassagemParametro()
 {
  int* params;
- tSimboloTs* ss = buscaTS(elementoEsquerda);
+ node n = list_first(pilhona);
+ char* proced = list_value(n);
+ printf("empilhaTipoPassagemParametro %s\n", proced);
+ tSimboloTs* ss = buscaTS(proced);
  if (ss)
  {
   if (ss->categoria == TS_CAT_CP)                        //PROCEDURE

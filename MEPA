@@ -3,11 +3,12 @@
      AMEM 1
      DSVS R00
 R01: ENPR 0
-     CRVI 1, -4
+     CRVL 1, -4
      CRCT 1
      SOMA
      ARMZ 1, -5
      RTPR 0, 1
 R00: NADA
      CRCT 0
-     ARMZ
+     ARMZ 0, 0
+     CRVL 0, 0
