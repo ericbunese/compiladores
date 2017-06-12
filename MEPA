@@ -11,4 +11,11 @@ R01: ENPR 0
 R00: NADA
      CRCT 0
      ARMZ 0, 0
+     AMEM 1
      CRVL 0, 0
+     CHPR R01, 0
+     ARMZ 0, 0
+     CRVL 0, 0
+     IMPR
+     DMEM 2
+     PARA

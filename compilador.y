@@ -24,6 +24,7 @@ int ehPassagemParametro;
 
 list pilhona;
 list parametros;
+list pilhaAlt;
 
 %}
 
@@ -578,7 +579,20 @@ regra_ident: ATRIBUICAO expressao                                               
                }
               }
              }
-           | ABRE_PARENTESES { parametroAtual=0; char str[100]; strcpy(str, elementoEsquerda); list_push(str, pilhona); } lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
+           | ABRE_PARENTESES
+             {
+              parametroAtual=0;
+              char str[100];
+              strcpy(str, elementoEsquerda);
+              list_push(str, pilhona);
+
+              tSimboloTs* ss = buscaTS(str);
+              if (ss && ss->categoria == TS_CAT_FU)
+              {
+               geraCodigo(NULL, "AMEM 1", NULL, NULL, NULL);
+              }
+             }
+             lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
              {
               node n = list_pop(pilhona);
               char *tok = list_value(n);
@@ -587,11 +601,11 @@ regra_ident: ATRIBUICAO expressao                                               
               {
                if (ss->categoria == TS_CAT_CP)
                {
-                chamaProcedimento(elementoEsquerda);
+                chamaProcedimento(tok);
                }
                else if (ss->categoria == TS_CAT_FU)
                {
-                chamaFuncao(elementoEsquerda);
+                chamaFuncao(tok);
                }
                else
                {
@@ -604,10 +618,23 @@ regra_ident: ATRIBUICAO expressao                                               
 ;
 
 variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
-        | IDENT { char str[TAM_TOKEN]; strcpy(str, token); list_push(str, pilhona); } variavel2
+        | IDENT {empilhaString(token, pilhona); } variavel2
 ;
 
-variavel2: ABRE_PARENTESES { parametroAtual=0; } lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
+variavel2: ABRE_PARENTESES
+           {
+            parametroAtual=0;
+            node n = list_first(pilhona);
+            char *nome;
+            nome = list_value(n);
+            tSimboloTs* ss = buscaTS(nome);
+            if (ss && ss->categoria == TS_CAT_FU)
+            {
+             geraCodigo(NULL, "AMEM 1", NULL, NULL, NULL);
+            }
+            list_push(nome, pilhona);
+           }
+           lista_expressoes_call FECHA_PARENTESES                      //Chamada Função ou procedimento.
            {
             node n = list_pop(pilhona);
             printf(".%p\n", n);
@@ -618,11 +645,11 @@ variavel2: ABRE_PARENTESES { parametroAtual=0; } lista_expressoes_call FECHA_PAR
             {
              if (ss->categoria == TS_CAT_CP)
              {
-              chamaProcedimento(elementoEsquerda);
+              chamaProcedimento(tok);
              }
              else if (ss->categoria == TS_CAT_FU)
              {
-              chamaFuncao(elementoEsquerda);
+              chamaFuncao(tok);
              }
              else
              {
@@ -803,7 +830,6 @@ void chamaFuncao(char *token)
   {
    char str[TAM_TOKEN];
    sprintf(str, "%d", nivelLexico);
-   geraCodigo(NULL, "AMEM 1", NULL, NULL, NULL);
    geraCodigo(NULL, "CHPR", ss->categoriaTs.f->rotulo, str, NULL);
   }
  }
@@ -845,6 +871,18 @@ void empilhaTipoPassagemParametro()
  }
 }
 
+void imprimeAlt()
+{
+ for (node n=list_first(pilhaAlt);n;n=list_next(n))
+      printf(".[%p]=%s(%p)\n", n, (char*)list_value(n),list_value(n));
+}
+
+void empilhaString(char *str1, list l)
+{
+ char *str2 = (char*)malloc(sizeof(char)*(strlen(str1)+1));
+ strcpy(str2, str1);
+ list_push(str2, l);
+}
 
 int main (int argc, char** argv)
 {
@@ -868,6 +906,7 @@ int main (int argc, char** argv)
    TS = criaTS();
    pilhona = list_new();
    parametros = list_new();
+   pilhaAlt = list_new();
    ehPassagemParametro = 0;
 
    yyin=fp;

@@ -7,5 +7,6 @@ var b:integer;
 	end;
 begin
 	a:=0;
-	write(add1(a), 0)
+	a:=add1(a);
+	write(a)
 end.

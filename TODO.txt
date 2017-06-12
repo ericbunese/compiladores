@@ -1,7 +1,6 @@
 checagem de tipos em atribuições e comparações (subida de tipo)
 checagem de quantidade de argumentos em chamadas de procedimentos e funções
 labels e goto
-passar parâmetros por referência em funções parâmetro (atribuição->variavel2->variavel2)
 remover parâmetros formais da ts
 remover procedimentos e funções da ts ao descer o nível léxico
 booleans e verificação de erro de tipo (mais as constantes true e false.)

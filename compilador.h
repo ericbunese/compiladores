@@ -138,3 +138,5 @@ void imprimeTS();
 void chamaFuncao(char* token);
 void chamaProcedimento(char *token);
 void empilhaTipoPassagemParametro();
+void imprimeAlt();
+void empilhaString(char *str1, list l);
