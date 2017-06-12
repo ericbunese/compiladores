@@ -26,6 +26,8 @@
 #define TS_TIP_INT 0
 //Tipo Boolean
 #define TS_TIP_BOO 1
+//Tipo Maldito
+#define TS_TIP_IMG 2
 //Tipo de passagem de parâmetro: Valor
 #define TS_PAR_VAL 0
 //Tipo de passagem de parâmetro: Referência
@@ -39,7 +41,7 @@ typedef enum simbolos {
   simb_while, simb_do, simb_if, simb_then, simb_else, simb_procedure, simb_function,
   simb_igual, simb_menor, simb_menor_igual, simb_maior, simb_maior_igual, simb_dif,
   simb_and, simb_or, simb_mais, simb_menos, simb_div, simb_mod, simb_mult, simb_read, simb_write,
-  simb_true, simb_false
+  simb_true, simb_false, simb_numeroI
 } simbolos;
 
 //Campos da tabela de símbolos para variáveis simples
@@ -54,6 +56,7 @@ typedef struct pfTs
 {
  int deslocamento;
  int tipoPassagem;
+ int tipo;
 }tPfTs;
 
 //Campos da tabela de símbolos para chamada de procedimentos
@@ -75,6 +78,7 @@ typedef struct fuTs
  int nParams;
  int* tipoPassagem;
  int deslocamento;
+ int tipoRetorno;
 }tFuTs;
 
 typedef struct simboloTs
@@ -117,12 +121,12 @@ tSimboloTs* criaSimboloTS(char* rot, int categoria, int nivel);
 tSimboloTs* criaSimboloTS_VS(char *rot, int categoria, int nivel, int deslocamento);
 tSimboloTs* criaSimboloTS_CP(char* rot, int nivel, char* rotulo_chamada, char* rotulo_saida);
 tSimboloTs* criaSimboloTS_FU(char* rot, int nivel, char* rotulo_chamada, char* rotulo_saida);
-tSimboloTs* criaSimboloTS_PF(char* rot, int nivel);
+tSimboloTs* criaSimboloTS_PF(char* rot, int nivel, int tipo);
 
 void atualizaSimboloTS_VS(tSimboloTs* s, int tipo);
 void atualizaSimboloTS_PF(tSimboloTs* s, int deslocamento);
 void atualizaSimboloTS_CP(tSimboloTs* s, int* tipoPassagem);
-void atualizaSimboloTS_FU(tSimboloTs* s, int* tipoPassagem, int deslocamento);
+void atualizaSimboloTS_FU(tSimboloTs* s, int* tipoPassagem, int deslocamento, int tipoRetorno);
 
 int insereTS(tSimboloTs* s);
 tSimboloTs* buscaTS(char* rot);

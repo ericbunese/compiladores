@@ -22,6 +22,8 @@ ident [a-zAZ][a-zAZ1-9]*
 
 numero [0-9]+
 
+numeroI [0-9]+[i]
+
 comentario "(*".*"*)"
 
 %%
@@ -250,6 +252,13 @@ mod     { simbolo = simb_mod;
            IMPRIME(" numero ");
            return NUMERO;
          }
+
+{numeroI} { simbolo = simb_numeroI;
+           strncpy (token, yytext, TAM_TOKEN);
+           IMPRIME(" numeroI ");
+           return NUMEROI;
+         }
+
 
 
 %%

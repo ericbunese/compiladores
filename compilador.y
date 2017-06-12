@@ -37,6 +37,7 @@ list parametros;
 %token MAIS MENOS AND OR MULT DIV MOD
 %token READ WRITE
 %token T_TRUE T_FALSE
+%token NUMEROI
 
 %%
 
@@ -51,7 +52,7 @@ programa    :{
              }
 ;
 
-bloco       : {totalVar[nivelLexico] = 0}
+bloco       : {totalVar[nivelLexico] = 0;}
               parte_declara_coisas
               T_BEGIN
               comandos
@@ -215,18 +216,32 @@ declara_function: IDENT
                     }
                    }
                   }
-                  FECHA_PARENTESES DOIS_PONTOS tipo PONTO_E_VIRGULA
+                  FECHA_PARENTESES DOIS_PONTOS tipo
                   {
+                   empilhaString(token, pilhona);
+                  }
+                  PONTO_E_VIRGULA
+                  {
+                   node t = list_pop(pilhona);
+                   char *tipo = list_value(t);
                    node p = list_pop(pilhona);
                    node n = list_first(pilhona);
                    int* params;
+                   int tp;
                    params = list_value(p);
                    tSimboloTs* ss = list_value(n);
                    if (ss)
                    {
                     if (ss->categoria == TS_CAT_FU)
                     {
-                     atualizaSimboloTS_FU(ss, params, ss->categoriaTs.f->nParams*-1-4);
+                     if (strcmp(tipo, "integer")==0)
+                      tp = TS_TIP_INT;
+                     else if (strcmp(tipo, "boolean")==0)
+                      tp = TS_TIP_BOO;
+                     else if (strcmp(tipo, "imaginario")==0)
+                      tp = TS_TIP_IMG;
+                     else imprimeErro("Tipo Inválido\n");
+                     atualizaSimboloTS_FU(ss, params, ss->categoriaTs.f->nParams*-1-4, tp);
                     }
                    }
                   }
@@ -271,7 +286,15 @@ lista_id_parametros: lista_id_parametros VIRGULA parametros
 
 parametros: IDENT {strcpy(elementoEsquerda, token);} DOIS_PONTOS tipo
             {
-             tSimboloTs* ss = criaSimboloTS_PF(elementoEsquerda, nivelLexico);
+             int tipo;
+             if (strcmp(token, "integer")==0)
+              tipo = TS_TIP_INT;
+             else if (strcmp(token, "boolean")==0)
+              tipo = TS_TIP_BOO;
+             else if (strcmp(token, "imaginario")==0)
+              tipo = TS_TIP_IMG;
+             else imprimeErro("Tipo Inválido\n");
+             tSimboloTs* ss = criaSimboloTS_PF(elementoEsquerda, nivelLexico, tipo);
              ss->categoriaTs.p->tipoPassagem = TS_PAR_VAL;
              node p = list_first(pilhona);
              int* params;
@@ -281,7 +304,15 @@ parametros: IDENT {strcpy(elementoEsquerda, token);} DOIS_PONTOS tipo
             }
           | VAR IDENT {strcpy(elementoEsquerda, token);} DOIS_PONTOS tipo
             {
-             tSimboloTs* ss = criaSimboloTS_PF(elementoEsquerda, nivelLexico);
+             int tipo;
+             if (strcmp(token, "integer")==0)
+              tipo = TS_TIP_INT;
+             else if (strcmp(token, "boolean")==0)
+              tipo = TS_TIP_BOO;
+             else if (strcmp(token, "imaginario")==0)
+              tipo = TS_TIP_IMG;
+             else imprimeErro("Tipo Inválido\n");
+             tSimboloTs* ss = criaSimboloTS_PF(elementoEsquerda, nivelLexico, tipo);
              ss->categoriaTs.p->tipoPassagem = TS_PAR_REF;
              node p = list_first(pilhona);
              int* params;
@@ -331,7 +362,7 @@ declara_vars: declara_vars declara_var
             | declara_var
 ;
 
-declara_var : {contVar = 0}
+declara_var : {contVar = 0;}
               lista_id_var DOIS_PONTOS
               tipo
               {
@@ -350,13 +381,13 @@ lista_id_var: lista_id_var VIRGULA IDENT
               {
                contVar++;
                totalVar[nivelLexico]++;
-               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar[nivelLexico]-1)
+               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar[nivelLexico]-1);
               }
             | IDENT
               {
                contVar++;
                totalVar[nivelLexico]++;
-               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar[nivelLexico]-1)
+               criaSimboloTS_VS(token, TS_CAT_VS, nivelLexico, totalVar[nivelLexico]-1);
               }
 ;
 
@@ -617,9 +648,37 @@ regra_ident: ATRIBUICAO expressao                                               
                }
               }
              }
+            |
+            PONTO_E_VIRGULA
+            {
+             tSimboloTs* ss = buscaTS(elementoEsquerda);
+             //Verifica se o símbolo buscado existe.
+             if (ss)
+             {
+              if (ss->categoria == TS_CAT_CP)
+              {
+               chamaProcedimento(elementoEsquerda);
+              }
+              else if (ss->categoria == TS_CAT_FU)
+              {
+               chamaFuncao(elementoEsquerda);
+              }
+              else
+              {
+               //erro
+              }
+             }
+            }
 ;
 
 variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
+        | NUMEROI
+          {
+           char str[TAM_TOKEN];
+           strncpy(str, token, strlen(token)-1);
+           printf("%s\n", str);
+           geraCodigo(NULL, "CRCT", str, NULL, NULL);
+          }
         | T_TRUE {geraCodigo(NULL, "CRCT", "1", NULL, NULL);}
         | T_FALSE {geraCodigo(NULL, "CRCT", "0", NULL, NULL);}
         | IDENT {empilhaString(token, pilhona); } variavel2
@@ -671,10 +730,8 @@ variavel2: ABRE_PARENTESES
          |
           {
            node n = list_pop(pilhona);
-           printf("-%p\n", n);
            char *tok = list_value(n);
            tSimboloTs* ss = buscaTS(tok);
-           printf(">-%s\n", tok);
            //Verifica se o símbolo buscado existe.
            if (ss)
            {
@@ -769,7 +826,7 @@ lista_expressoes_write: lista_expressoes_write VIRGULA expressao {geraCodigo(NUL
                       | expressao {geraCodigo(NULL, "IMPR", NULL, NULL, NULL);}
 ;
 
-expressao_completa: expressao expressao_completa2
+expressao_completa: {tipoCorrente=-1;} expressao expressao_completa2
 ;
 
 expressao_completa2: compara expressao

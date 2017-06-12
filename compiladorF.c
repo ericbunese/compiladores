@@ -131,7 +131,7 @@ tSimboloTs* criaSimboloTS_FU(char* rot, int nivel, char* rotulo_chamada, char* r
   return t;
 }
 
-tSimboloTs* criaSimboloTS_PF(char* rot, int nivel)
+tSimboloTs* criaSimboloTS_PF(char* rot, int nivel, int tipo)
 {
  tSimboloTs* t = (tSimboloTs*)malloc(sizeof(tSimboloTs));
  t->categoriaTs.p = (tPfTs*)malloc(sizeof(tPfTs));
@@ -141,6 +141,7 @@ tSimboloTs* criaSimboloTS_PF(char* rot, int nivel)
   strcpy(t->ident, rot);
   t->categoria = TS_CAT_PF;
   t->nivel = nivel;
+  t->categoriaTs.p->tipo = tipo;
 
   if (!insereTS(t))
    printf("Catástrofe detectada:\nNão foi possível inserir o símbolo na TS\n");
@@ -177,7 +178,7 @@ void atualizaSimboloTS_CP(tSimboloTs* s, int* tipoPassagem)
  else printf("Catástrofe detectada:\nTentando atualizar simbolo TS do tipo CP porém a categoria é %d\n\n", s->categoria);
 }
 
-void atualizaSimboloTS_FU(tSimboloTs* s, int* tipoPassagem, int deslocamento)
+void atualizaSimboloTS_FU(tSimboloTs* s, int* tipoPassagem, int deslocamento, int tipoRetorno)
 {
  if (s->categoria==TS_CAT_FU)
  {
@@ -185,6 +186,7 @@ void atualizaSimboloTS_FU(tSimboloTs* s, int* tipoPassagem, int deslocamento)
       free(s->categoriaTs.f->tipoPassagem);
   s->categoriaTs.f->tipoPassagem = tipoPassagem;
   s->categoriaTs.f->deslocamento = deslocamento;
+  s->categoriaTs.f->tipoRetorno = tipoRetorno;
  }
  else printf("Catástrofe detectada:\nTentando atualizar simbolo TS do tipo FU porém a categoria é %d\n\n", s->categoria);
 }
@@ -224,6 +226,9 @@ void atualizaTS(int num, char token[TAM_TOKEN])
      atualizaSimboloTS_VS(t, TS_TIP_INT);
     else if (strcmp(token, "boolean")==0)
      atualizaSimboloTS_VS(t, TS_TIP_BOO);
+    else if (strcmp(token, "imaginario")==0)
+     atualizaSimboloTS_VS(t, TS_TIP_IMG);
+    else imprimeErro("Tipo Inválido\n");
     i++;
    }
   }
@@ -254,7 +259,7 @@ void imprimeSimboloTS(tSimboloTs* t)
   break;
 
   case TS_CAT_PF:
-   printf("\nSimbolo TS:\nRot\tCat\tNiv\tDesl\tTipo\n%s\t%s\t%d\t%d\t%s\n\n", t->ident, catTS(t->categoria), t->nivel, t->categoriaTs.p->deslocamento, tipoPassagemTS(t->categoriaTs.p->tipoPassagem));
+   printf("\nSimbolo TS:\nRot\tCat\tNiv\tDesl\tTipoP\tTipo\n%s\t%s\t%d\t%d\t%s\t%s\n\n", t->ident, catTS(t->categoria), t->nivel, t->categoriaTs.p->deslocamento, tipoPassagemTS(t->categoriaTs.p->tipoPassagem), tipoTS(t->categoriaTs.p->tipo));
   break;
 
   case TS_CAT_CP:
@@ -269,7 +274,7 @@ void imprimeSimboloTS(tSimboloTs* t)
   break;
 
   case TS_CAT_FU:
-   printf("\nSimbolo TS:\nRot\tCat\tNiv\tRot\tNiv\tnParams\tDeslocamento\n%s\t%s\t%d\t%s\t%d\t%d\t%d\n", t->ident, catTS(t->categoria), t->nivel, t->categoriaTs.f->rotulo, t->categoriaTs.f->nivel, t->categoriaTs.f->nParams, t->categoriaTs.f->deslocamento);
+   printf("\nSimbolo TS:\nRot\tCat\tNiv\tRot\tNiv\tnParams\tDeslocamento\tTipo Ret\n%s\t%s\t%d\t%s\t%d\t%d\t%d\t\t%s\n", t->ident, catTS(t->categoria), t->nivel, t->categoriaTs.f->rotulo, t->categoriaTs.f->nivel, t->categoriaTs.f->nParams, t->categoriaTs.f->deslocamento, tipoTS(t->categoriaTs.f->tipoRetorno));
    if (t->categoriaTs.f->tipoPassagem!=NULL && t->categoriaTs.f->nParams>0)
    {
     printf("Tipos Passagem: [%d", t->categoriaTs.f->tipoPassagem[0]);
@@ -316,7 +321,11 @@ char *tipoTS(int tipo)
   break;
 
   case TS_TIP_BOO:
-   return "BOOLEAN";
+   return "BOOL";
+  break;
+
+  case TS_TIP_IMG:
+   return "IMG";
   break;
 
   default:

@@ -1,22 +1,12 @@
      INPP
      AMEM 1
-     LEIT
-     ARMZ 0, 0
-     CRCT 1
-     CRCT 0
-     CRCT 1
-     DISJ
-     CONJ
-     CRVL 0, 0
-     CRCT 5
-     CMMA
-     CONJ
-     DSVF R00
+     DSVS R00
+R01: ENPR 0
+     CRCT 5^ÿ
+     ARMZ 1, -5
+     RTPR 0, 1
+R00: NADA
      CRCT 1
      IMPR
-     DSVS R01
-R00: NADA
-     DSVS R01
-R01: NADA
      DMEM 1
      PARA
