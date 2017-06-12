@@ -21,10 +21,11 @@ list TS;
 int parametroAtual;
 //ehPassagemParametro: indica se a variável lida deve ser considerada como passagem de parâmetro.
 int ehPassagemParametro;
+//tipoCorrente: indica qual o tipo da expressão avaliada.
+int tipoCorrente;
 
 list pilhona;
 list parametros;
-list pilhaAlt;
 
 %}
 
@@ -35,6 +36,7 @@ list pilhaAlt;
 %token IGUAL MENOR MENOR_IGUAL MAIOR MAIOR_IGUAL DIF
 %token MAIS MENOS AND OR MULT DIV MOD
 %token READ WRITE
+%token T_TRUE T_FALSE
 
 %%
 
@@ -618,6 +620,8 @@ regra_ident: ATRIBUICAO expressao                                               
 ;
 
 variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
+        | T_TRUE {geraCodigo(NULL, "CRCT", "1", NULL, NULL);}
+        | T_FALSE {geraCodigo(NULL, "CRCT", "0", NULL, NULL);}
         | IDENT {empilhaString(token, pilhona); } variavel2
 ;
 
@@ -808,7 +812,7 @@ termo2: MULT fator {geraCodigo(NULL, "MULT", NULL, NULL, NULL);}
 ;
 
 fator: variavel
-     | ABRE_PARENTESES expressao FECHA_PARENTESES
+     | ABRE_PARENTESES expressao_completa FECHA_PARENTESES
 ;
 
 compara: IGUAL {list_push("CMIG", pilhona);} | MENOR {list_push("CMME", pilhona);}
@@ -871,10 +875,10 @@ void empilhaTipoPassagemParametro()
  }
 }
 
-void imprimeAlt()
+void sobeTipo(int tipo)
 {
- for (node n=list_first(pilhaAlt);n;n=list_next(n))
-      printf(".[%p]=%s(%p)\n", n, (char*)list_value(n),list_value(n));
+ if (tipoCorrente!=-1 & tipoCorrente!=tipo)
+     imprimeErro("A expressão recebeu parâmetros de tipo incorreto.\n");
 }
 
 void empilhaString(char *str1, list l)
@@ -906,8 +910,8 @@ int main (int argc, char** argv)
    TS = criaTS();
    pilhona = list_new();
    parametros = list_new();
-   pilhaAlt = list_new();
    ehPassagemParametro = 0;
+   tipoCorrente = -1;
 
    yyin=fp;
    yyparse();

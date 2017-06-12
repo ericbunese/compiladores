@@ -159,6 +159,18 @@ write  {  simbolo = simb_write;
             return WRITE;
        }
 
+true  {  simbolo = simb_true;
+           strncpy (token, yytext, TAM_TOKEN);
+           IMPRIME(" true ");
+           return T_TRUE;
+      }
+
+false  {  simbolo = simb_false;
+          strncpy (token, yytext, TAM_TOKEN);
+          IMPRIME(" false ");
+          return T_FALSE;
+     }
+
 \=     { simbolo = simb_igual;
           strncpy (token, yytext, TAM_TOKEN);
           IMPRIME(" igual ")

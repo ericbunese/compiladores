@@ -38,7 +38,8 @@ typedef enum simbolos {
   simb_atribuicao, simb_abre_parenteses, simb_fecha_parenteses,
   simb_while, simb_do, simb_if, simb_then, simb_else, simb_procedure, simb_function,
   simb_igual, simb_menor, simb_menor_igual, simb_maior, simb_maior_igual, simb_dif,
-  simb_and, simb_or, simb_mais, simb_menos, simb_div, simb_mod, simb_mult, simb_read, simb_write
+  simb_and, simb_or, simb_mais, simb_menos, simb_div, simb_mod, simb_mult, simb_read, simb_write,
+  simb_true, simb_false
 } simbolos;
 
 //Campos da tabela de símbolos para variáveis simples
