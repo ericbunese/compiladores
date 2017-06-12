@@ -8,7 +8,7 @@
 //num_vars: Total de variáveis no programa
 int num_vars;
 //contVar: Total de variáveis na linha
-int contVar;
+int contVar, contVar2;
 //totalVar[i]: Total de variáveis no nível léxico i
 int totalVar[10];
 //nivelLexico, deslocamento: variáveis de controle de endereçamento.
@@ -24,6 +24,7 @@ int ehPassagemParametro;
 
 list pilhona;
 list parametros;
+list parametros2;
 list pilhaTipo;
 
 %}
@@ -97,8 +98,9 @@ declara_procedure: IDENT
                     list_push(params, pilhona);
                     geraCodigo(NULL, "DSVS", rotuloSaida, NULL, NULL);
                     geraCodigo(rotulo, "ENPR", str, NULL, NULL);
+                    nivelLexico++;
                    }
-                   ABRE_PARENTESES {contVar = 0; nivelLexico++;} lista_id_parametros
+                   lista_parametros
                    {
                     //atualiza nParams na TS.
                     node n = list_next(list_first(pilhona));
@@ -128,7 +130,7 @@ declara_procedure: IDENT
                      }
                     }
                    }
-                   FECHA_PARENTESES PONTO_E_VIRGULA
+                   PONTO_E_VIRGULA
                    {
                     node p = list_pop(pilhona);
                     node n = list_first(pilhona);
@@ -183,8 +185,9 @@ declara_function: IDENT
                    list_push(params, pilhona);
                    geraCodigo(NULL, "DSVS", rotuloSaida, NULL, NULL);
                    geraCodigo(rotulo, "ENPR", str, NULL, NULL);
+                   nivelLexico++;
                   }
-                  ABRE_PARENTESES { contVar = 0; nivelLexico++; } lista_id_parametros
+                  lista_parametros
                   {
                    //atualiza nParams na TS.
                    node n = list_next(list_first(pilhona));
@@ -214,7 +217,7 @@ declara_function: IDENT
                     }
                    }
                   }
-                  FECHA_PARENTESES DOIS_PONTOS tipo
+                  DOIS_PONTOS tipo
                   {
                    empilhaString(token, pilhona);
                   }
@@ -265,59 +268,108 @@ declara_function: IDENT
                   PONTO_E_VIRGULA
 ;
 
-lista_id_parametros: lista_id_parametros VIRGULA parametros
-                     {
-                      node p = list_first(pilhona);
-                      int* params = list_value(p);
-                      params = (int*)realloc(params, (1+contVar)*sizeof(int));
-                      contVar++;
-                     }
-                   | parametros
-                     {
-                      node p = list_first(pilhona);
-                      int* params = list_value(p);
-                      params = (int*)realloc(params, (1+contVar)*sizeof(int));
-                      contVar++;
-                     }
-                   |
+lista_parametros: ABRE_PARENTESES {contVar = 0; contVar2 = 0;} lista_id_parametros FECHA_PARENTESES
+                |
 ;
 
-parametros: IDENT {strcpy(elementoEsquerda, token);} DOIS_PONTOS tipo
-            {
-             int tipo;
-             if (strcmp(token, "integer")==0)
-              tipo = TS_TIP_INT;
-             else if (strcmp(token, "boolean")==0)
-              tipo = TS_TIP_BOO;
-             else if (strcmp(token, "imaginario")==0)
-              tipo = TS_TIP_IMG;
-             else imprimeErro("Tipo Inválido\n");
-             tSimboloTs* ss = criaSimboloTS_PF(elementoEsquerda, nivelLexico, tipo);
-             ss->categoriaTs.p->tipoPassagem = TS_PAR_VAL;
-             node p = list_first(pilhona);
-             int* params;
-             params = list_value(p);
-             params[contVar] = TS_PAR_VAL;
-             list_push(ss, parametros);
-            }
-          | VAR IDENT {strcpy(elementoEsquerda, token);} DOIS_PONTOS tipo
-            {
-             int tipo;
-             if (strcmp(token, "integer")==0)
-              tipo = TS_TIP_INT;
-             else if (strcmp(token, "boolean")==0)
-              tipo = TS_TIP_BOO;
-             else if (strcmp(token, "imaginario")==0)
-              tipo = TS_TIP_IMG;
-             else imprimeErro("Tipo Inválido\n");
-             tSimboloTs* ss = criaSimboloTS_PF(elementoEsquerda, nivelLexico, tipo);
-             ss->categoriaTs.p->tipoPassagem = TS_PAR_REF;
-             node p = list_first(pilhona);
-             int* params;
-             params = list_value(p);
-             params[contVar] = TS_PAR_REF;
-             list_push(ss, parametros);
-            }
+lista_id_parametros: lista_id_parametros2 lista_id_parametros3
+;
+
+lista_id_parametros3: PONTO_E_VIRGULA {contVar2 = 0;} lista_id_parametros
+      |
+;
+
+lista_id_parametros2: VAR id_parametros DOIS_PONTOS tipo
+                      {
+                       int tipo;
+                       if (strcmp(token, "integer")==0)
+                        tipo = TS_TIP_INT;
+                       else if (strcmp(token, "boolean")==0)
+                        tipo = TS_TIP_BOO;
+                       else if (strcmp(token, "imaginario")==0)
+                        tipo = TS_TIP_IMG;
+                       else imprimeErro("Tipo Inválido\n");
+
+                       node f = list_next(list_first(pilhona));
+                       tSimboloTs* simbp = list_value(f);
+                       node p = list_first(pilhona);
+                       int* params;
+                       params = list_value(p);
+                       //list_push(ss, parametros);
+                       node n;
+                       char* nome;
+                       tSimboloTs* ss;
+                       for (int i=contVar-contVar2;i<contVar;++i)
+                       {
+                        n = list_pop(parametros2);
+                        nome = list_value(n);
+                        params[i] = TS_PAR_REF;
+                        ss = criaSimboloTS_PF(nome, nivelLexico, tipo);
+                        if (ss && ss->categoria == TS_CAT_PF)
+                        {
+                         ss->categoriaTs.p->tipoPassagem = TS_PAR_REF;
+                         ss->categoriaTs.p->tipo = tipo;
+                        }
+                        list_push(ss, parametros);
+                       }
+                      }
+                    | id_parametros DOIS_PONTOS tipo
+                      {
+                       int tipo;
+                       if (strcmp(token, "integer")==0)
+                        tipo = TS_TIP_INT;
+                       else if (strcmp(token, "boolean")==0)
+                        tipo = TS_TIP_BOO;
+                       else if (strcmp(token, "imaginario")==0)
+                        tipo = TS_TIP_IMG;
+                       else imprimeErro("Tipo Inválido\n");
+
+                       node f = list_next(list_first(pilhona));
+                       tSimboloTs* simbp = list_value(f);
+                       node p = list_first(pilhona);
+                       int* params;
+                       params = list_value(p);
+                       //list_push(ss, parametros);
+                       node n;
+                       char* nome;
+                       tSimboloTs* ss;
+                       for (int i=contVar-contVar2;i<contVar;++i)
+                       {
+                        n = list_pop(parametros2);
+                        nome = list_value(n);
+                        params[i] = TS_PAR_VAL;
+                        ss = criaSimboloTS_PF(nome, nivelLexico, tipo);
+                        if (ss && ss->categoria == TS_CAT_PF)
+                        {
+                         ss->categoriaTs.p->tipoPassagem = TS_PAR_VAL;
+                         ss->categoriaTs.p->tipo = tipo;
+                        }
+                        list_push(ss, parametros);
+                       }
+                      }
+;
+
+id_parametros: id_parametros VIRGULA IDENT
+              {
+               node p = list_first(pilhona);
+               int* params = list_value(p);
+               params = (int*)realloc(params, (1+contVar)*sizeof(int));
+               params[contVar] = -1;
+               contVar2++;
+               contVar++;
+               empilhaString(token, parametros2);
+              }
+             |
+              IDENT
+              {
+               node p = list_first(pilhona);
+               int* params = list_value(p);
+               params = (int*)realloc(params, (1+contVar)*sizeof(int));
+               params[contVar] = -1;
+               contVar2++;
+               contVar++;
+               empilhaString(token, parametros2);
+              }
 ;
 
 ////////////////////////////////////////////////////////////////
@@ -482,7 +534,7 @@ regra_if: IF
            list_push(rotulo_saida, pilhona);
            list_push(rotulo_else, pilhona);
           }
-          ABRE_PARENTESES
+          //ABRE_PARENTESES
           {
            empilhaTipo(TS_TIP_BOO);
           }
@@ -490,7 +542,7 @@ regra_if: IF
           {
            consomeTipo(1, 0);
           }
-          FECHA_PARENTESES
+          //FECHA_PARENTESES
           THEN
           {
            node e = list_first(pilhona);
@@ -545,7 +597,7 @@ regra_while: WHILE
      list_push(rotulo_saida, pilhona);
      geraCodigo(rotulo_entrada, "NADA", NULL, NULL, NULL);
     }
-    ABRE_PARENTESES
+    //ABRE_PARENTESES
     {
      empilhaTipo(TS_TIP_BOO);
     }
@@ -553,7 +605,7 @@ regra_while: WHILE
     {
      consomeTipo(1, 0);
     }
-    FECHA_PARENTESES
+    //FECHA_PARENTESES
     DO
     {
      node s = list_first(pilhona);
@@ -666,7 +718,6 @@ regra_ident: ATRIBUICAO expressao                                               
               }
              }
             |
-            PONTO_E_VIRGULA
             {
              tSimboloTs* ss = buscaTS(elementoEsquerda);
              //Verifica se o símbolo buscado existe.
@@ -682,7 +733,7 @@ regra_ident: ATRIBUICAO expressao                                               
               }
               else
               {
-               //erro
+               imprimeErro("Símbolo não encontrado.\n");
               }
              }
             }
@@ -840,7 +891,7 @@ lista_expressoes_call: lista_expressoes_call VIRGULA
                         empilhaTipoPassagemParametro();
                        }
                        expressao { parametroAtual++; ehPassagemParametro=0; }
-                    |
+                     |
                        {
                         empilhaTipoPassagemParametro();
                        }
@@ -1015,6 +1066,7 @@ int main (int argc, char** argv)
    TS = criaTS();
    pilhona = list_new();
    parametros = list_new();
+   parametros2 = list_new();
    pilhaTipo = list_new();
    ehPassagemParametro = 0;
 

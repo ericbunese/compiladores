@@ -1,10 +1,20 @@
-program type2 (input, output);
-var im: imaginario;
-		x: integer;
+program exemplo75 (input, output);
+var m,n :  integer;
+function f ( n : integer; var k:integer ) : integer;
+var p, q : integer;
 begin
-	im := 2i;
-	x := im * im;
-	if (x=2) then
-		write(2);
-	x := im * im * im;
+   if n<2 then
+      begin
+         f:=n; k:=0
+      end
+   else
+      begin
+         f:=f(n-1,p) + f(n-2,q);
+         k:=p+q+1
+      end;
+   write (n, k)
+end;
+begin
+   n:=f(3,m);
+   write(n, m)
 end.
