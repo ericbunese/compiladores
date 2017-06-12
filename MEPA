@@ -1,12 +1,13 @@
      INPP
      AMEM 1
+     AMEM 1
      DSVS R00
 R01: ENPR 0
-     CRCT 5^ÿ
+     CRCT 5
      ARMZ 1, -5
      RTPR 0, 1
 R00: NADA
      CRCT 1
      IMPR
-     DMEM 1
+     DMEM 2
      PARA

@@ -675,8 +675,9 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
         | NUMEROI
           {
            char str[TAM_TOKEN];
-           strncpy(str, token, strlen(token)-1);
-           printf("%s\n", str);
+           int tam = strlen(token)-1;
+           strncpy(str, token, tam);
+           str[tam] = '\0';
            geraCodigo(NULL, "CRCT", str, NULL, NULL);
           }
         | T_TRUE {geraCodigo(NULL, "CRCT", "1", NULL, NULL);}
