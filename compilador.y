@@ -64,7 +64,6 @@ bloco       : {totalVar[nivelLexico] = 0;}
                 geraCodigo(NULL, "DMEM", str, NULL, NULL);
                }
                //Remove funções e procedimentos deste nível léxico da TS:
-
               }
               T_END
 ;
@@ -402,9 +401,8 @@ comando_composto: T_BEGIN comandos T_END
                 | comando
 ;
 
-comandos: comando
-        | comandos PONTO_E_VIRGULA comando
-        |
+comandos: comando {printf("primeiro\n");}
+        | comandos PONTO_E_VIRGULA{printf("meio\n");} comando
 ;
 
 comando: rotulo comando_sem_rotulo
@@ -416,7 +414,7 @@ rotulo: NUMERO DOIS_PONTOS
 
 comando_sem_rotulo: regra_if
                   | regra_while
-                  | IDENT {strcpy(elementoEsquerda, token);} regra_ident
+                  | IDENT {printf("aqui\n");strcpy(elementoEsquerda, token);} regra_ident
                   | READ ABRE_PARENTESES lista_ids_read FECHA_PARENTESES
                   | WRITE ABRE_PARENTESES lista_expressoes_write FECHA_PARENTESES
                   | ABRE_PARENTESES MAIS regra_comentario
@@ -490,7 +488,7 @@ regra_if: IF
           }
           expressao_completa
           {
-           consomeTipo(1);
+           consomeTipo(1, 0);
           }
           FECHA_PARENTESES
           THEN
@@ -507,11 +505,10 @@ regra_if: IF
            char* rotulo_else = list_value(e);
            geraCodigo(NULL, "DSVS", rotulo_saida, NULL, NULL);
           }
-          talveztemelse
+          talveztemelse {printf("aqui sai do if\n");}
 ;
 
-talveztemelse: PONTO_E_VIRGULA
-               {
+talveztemelse: {
                 node e = list_pop(pilhona);
                 node s = list_pop(pilhona);
                 char *rotulo_saida = list_value(s);
@@ -554,7 +551,7 @@ regra_while: WHILE
     }
     expressao_completa
     {
-     consomeTipo(1);
+     consomeTipo(1, 0);
     }
     FECHA_PARENTESES
     DO
@@ -592,7 +589,7 @@ regra_ident: ATRIBUICAO expressao                                               
                 geraCodigo(NULL, "ARMZ", nl, ds, NULL);
 
                 empilhaTipo(ss->categoriaTs.v->tipo);
-                consomeTipo(1);
+                consomeTipo(1, 0);
                }
                else if (ss->categoria == TS_CAT_PF)
                {
@@ -612,7 +609,7 @@ regra_ident: ATRIBUICAO expressao                                               
                 }
 
                 empilhaTipo(ss->categoriaTs.p->tipo);
-                consomeTipo(1);
+                consomeTipo(1, 0);
                }
                else if (ss->categoria == TS_CAT_FU)                             //Escrita em valor de retorno de Função.
                {
@@ -622,7 +619,7 @@ regra_ident: ATRIBUICAO expressao                                               
                 geraCodigo(NULL, "ARMZ", nl, ds, NULL);
 
                 empilhaTipo(ss->categoriaTs.f->tipoRetorno);
-                consomeTipo(1);
+                consomeTipo(1, 0);
                }
                else
                {
@@ -856,7 +853,7 @@ lista_expressoes_write: lista_expressoes_write VIRGULA expressao {geraCodigo(NUL
 expressao_completa: {} expressao expressao_completa2
 ;
 
-expressao_completa2: compara expressao { consomeTipo(1); empilhaTipo(TS_TIP_BOO); }
+expressao_completa2: compara expressao { consomeTipo(1, 0); empilhaTipo(TS_TIP_BOO); }
                      {
                       node n = list_pop(pilhona);
                       char* func = list_value(n);
@@ -878,9 +875,9 @@ expressao_intermediaria: expressao2
                        |
 ;
 
-expressao2: MAIS termo {geraCodigo(NULL, "SOMA", NULL, NULL, NULL); consomeTipo(0);}
-          | MENOS termo {geraCodigo(NULL, "SUBT", NULL, NULL, NULL); consomeTipo(0);}
-          | AND termo {geraCodigo(NULL, "CONJ", NULL, NULL, NULL); consomeTipo(0);}
+expressao2: MAIS termo {geraCodigo(NULL, "SOMA", NULL, NULL, NULL); consomeTipo(0, 0);}
+          | MENOS termo {geraCodigo(NULL, "SUBT", NULL, NULL, NULL); consomeTipo(0, 0);}
+          | AND termo {geraCodigo(NULL, "CONJ", NULL, NULL, NULL); consomeTipo(0, 0);}
 ;
 
 termo: fator termo_intermediario
@@ -890,9 +887,9 @@ termo_intermediario: termo2
                    |
 ;
 
-termo2: MULT fator {geraCodigo(NULL, "MULT", NULL, NULL, NULL); consomeTipo(0);}
-      | DIV fator {geraCodigo(NULL, "DIVI", NULL, NULL, NULL); consomeTipo(0);}
-      | OR fator {geraCodigo(NULL, "DISJ", NULL, NULL, NULL); consomeTipo(0);}
+termo2: MULT fator {geraCodigo(NULL, "MULT", NULL, NULL, NULL); consomeTipo(1, 1);}
+      | DIV fator {geraCodigo(NULL, "DIVI", NULL, NULL, NULL); consomeTipo(1, 1);}
+      | OR fator {geraCodigo(NULL, "DISJ", NULL, NULL, NULL); consomeTipo(0, 0);}
 ;
 
 fator: variavel
@@ -973,7 +970,7 @@ void empilhaTipo(int tipo)
  list_push(t, pilhaTipo);
 }
 
-void consomeTipo(int limpar)
+void consomeTipo(int limpar, int ehMult)
 {
  node n1 = list_pop(pilhaTipo);
  node n2 = list_pop(pilhaTipo);
@@ -984,6 +981,9 @@ void consomeTipo(int limpar)
  {
   if (!limpar)
       empilhaTipo(*t1);
+
+  if (ehMult)
+      empilhaTipo(TS_TIP_INT);
  }
  else
  {

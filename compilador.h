@@ -148,4 +148,4 @@ void empilhaString(char *str1, list l);
 
 
 void empilhaTipo(int tipo);
-void consomeTipo(int limpar);
+void consomeTipo(int limpar, int ehMult);
