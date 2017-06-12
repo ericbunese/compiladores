@@ -21,11 +21,10 @@ list TS;
 int parametroAtual;
 //ehPassagemParametro: indica se a variável lida deve ser considerada como passagem de parâmetro.
 int ehPassagemParametro;
-//tipoCorrente: indica qual o tipo da expressão avaliada.
-int tipoCorrente;
 
 list pilhona;
 list parametros;
+list pilhaTipo;
 
 %}
 
@@ -486,7 +485,13 @@ regra_if: IF
            list_push(rotulo_else, pilhona);
           }
           ABRE_PARENTESES
+          {
+           empilhaTipo(TS_TIP_BOO);
+          }
           expressao_completa
+          {
+           consomeTipo(1);
+          }
           FECHA_PARENTESES
           THEN
           {
@@ -544,7 +549,13 @@ regra_while: WHILE
      geraCodigo(rotulo_entrada, "NADA", NULL, NULL, NULL);
     }
     ABRE_PARENTESES
+    {
+     empilhaTipo(TS_TIP_BOO);
+    }
     expressao_completa
+    {
+     consomeTipo(1);
+    }
     FECHA_PARENTESES
     DO
     {
@@ -579,6 +590,9 @@ regra_ident: ATRIBUICAO expressao                                               
                 sprintf(nl, "%d", ss->nivel);
                 sprintf(ds, "%d", ss->categoriaTs.v->deslocamento);
                 geraCodigo(NULL, "ARMZ", nl, ds, NULL);
+
+                empilhaTipo(ss->categoriaTs.v->tipo);
+                consomeTipo(1);
                }
                else if (ss->categoria == TS_CAT_PF)
                {
@@ -596,6 +610,9 @@ regra_ident: ATRIBUICAO expressao                                               
                  sprintf(ds, "%d", ss->categoriaTs.p->deslocamento);
                  geraCodigo(NULL, "ARMI", nl, ds, NULL);
                 }
+
+                empilhaTipo(ss->categoriaTs.p->tipo);
+                consomeTipo(1);
                }
                else if (ss->categoria == TS_CAT_FU)                             //Escrita em valor de retorno de Função.
                {
@@ -603,6 +620,9 @@ regra_ident: ATRIBUICAO expressao                                               
                 sprintf(nl, "%d", ss->nivel+1);
                 sprintf(ds, "%d", ss->categoriaTs.f->deslocamento);
                 geraCodigo(NULL, "ARMZ", nl, ds, NULL);
+
+                empilhaTipo(ss->categoriaTs.f->tipoRetorno);
+                consomeTipo(1);
                }
                else
                {
@@ -671,7 +691,7 @@ regra_ident: ATRIBUICAO expressao                                               
             }
 ;
 
-variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
+variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL); empilhaTipo(TS_TIP_INT);}
         | NUMEROI
           {
            char str[TAM_TOKEN];
@@ -679,9 +699,10 @@ variavel: NUMERO {geraCodigo(NULL, "CRCT", token, NULL, NULL);}
            strncpy(str, token, tam);
            str[tam] = '\0';
            geraCodigo(NULL, "CRCT", str, NULL, NULL);
+           empilhaTipo(TS_TIP_IMG);
           }
-        | T_TRUE {geraCodigo(NULL, "CRCT", "1", NULL, NULL);}
-        | T_FALSE {geraCodigo(NULL, "CRCT", "0", NULL, NULL);}
+        | T_TRUE {geraCodigo(NULL, "CRCT", "1", NULL, NULL); empilhaTipo(TS_TIP_BOO);}
+        | T_FALSE {geraCodigo(NULL, "CRCT", "0", NULL, NULL); empilhaTipo(TS_TIP_BOO);}
         | IDENT {empilhaString(token, pilhona); } variavel2
 ;
 
@@ -695,6 +716,7 @@ variavel2: ABRE_PARENTESES
             if (ss && ss->categoria == TS_CAT_FU)
             {
              geraCodigo(NULL, "AMEM 1", NULL, NULL, NULL);
+             empilhaTipo(ss->categoriaTs.f->tipoRetorno);
             }
             list_push(nome, pilhona);
            }
@@ -755,6 +777,8 @@ variavel2: ABRE_PARENTESES
               }
              }
              else geraCodigo(NULL, "CRVL", nl, ds, NULL);
+
+             empilhaTipo(ss->categoriaTs.v->tipo);
             }
             else if (ss->categoria == TS_CAT_PF)
             {
@@ -798,6 +822,8 @@ variavel2: ABRE_PARENTESES
               }
               else geraCodigo(NULL, "CRVI", nl, ds, NULL);
              }
+
+             empilhaTipo(ss->categoriaTs.p->tipo);
             }
             else
             {
@@ -827,10 +853,10 @@ lista_expressoes_write: lista_expressoes_write VIRGULA expressao {geraCodigo(NUL
                       | expressao {geraCodigo(NULL, "IMPR", NULL, NULL, NULL);}
 ;
 
-expressao_completa: {tipoCorrente=-1;} expressao expressao_completa2
+expressao_completa: {} expressao expressao_completa2
 ;
 
-expressao_completa2: compara expressao
+expressao_completa2: compara expressao { consomeTipo(1); empilhaTipo(TS_TIP_BOO); }
                      {
                       node n = list_pop(pilhona);
                       char* func = list_value(n);
@@ -852,9 +878,9 @@ expressao_intermediaria: expressao2
                        |
 ;
 
-expressao2: MAIS termo {geraCodigo(NULL, "SOMA", NULL, NULL, NULL);}
-          | MENOS termo {geraCodigo(NULL, "SUBT", NULL, NULL, NULL);}
-          | AND termo {geraCodigo(NULL, "CONJ", NULL, NULL, NULL);}
+expressao2: MAIS termo {geraCodigo(NULL, "SOMA", NULL, NULL, NULL); consomeTipo(0);}
+          | MENOS termo {geraCodigo(NULL, "SUBT", NULL, NULL, NULL); consomeTipo(0);}
+          | AND termo {geraCodigo(NULL, "CONJ", NULL, NULL, NULL); consomeTipo(0);}
 ;
 
 termo: fator termo_intermediario
@@ -864,9 +890,9 @@ termo_intermediario: termo2
                    |
 ;
 
-termo2: MULT fator {geraCodigo(NULL, "MULT", NULL, NULL, NULL);}
-      | DIV fator {geraCodigo(NULL, "DIVI", NULL, NULL, NULL);}
-      | OR fator {geraCodigo(NULL, "DISJ", NULL, NULL, NULL);}
+termo2: MULT fator {geraCodigo(NULL, "MULT", NULL, NULL, NULL); consomeTipo(0);}
+      | DIV fator {geraCodigo(NULL, "DIVI", NULL, NULL, NULL); consomeTipo(0);}
+      | OR fator {geraCodigo(NULL, "DISJ", NULL, NULL, NULL); consomeTipo(0);}
 ;
 
 fator: variavel
@@ -933,17 +959,38 @@ void empilhaTipoPassagemParametro()
  }
 }
 
-void sobeTipo(int tipo)
-{
- if (tipoCorrente!=-1 & tipoCorrente!=tipo)
-     imprimeErro("A expressão recebeu parâmetros de tipo incorreto.\n");
-}
-
 void empilhaString(char *str1, list l)
 {
  char *str2 = (char*)malloc(sizeof(char)*(strlen(str1)+1));
  strcpy(str2, str1);
  list_push(str2, l);
+}
+
+void empilhaTipo(int tipo)
+{
+ int *t = (int*)malloc(sizeof(int));
+ *t = tipo;
+ list_push(t, pilhaTipo);
+}
+
+void consomeTipo(int limpar)
+{
+ node n1 = list_pop(pilhaTipo);
+ node n2 = list_pop(pilhaTipo);
+ int *t1, *t2;
+ t1 = list_value(n1);
+ t2 = list_value(n2);
+ if (*t1 == *t2)
+ {
+  if (!limpar)
+      empilhaTipo(*t1);
+ }
+ else
+ {
+  char str[100];
+  sprintf(str, "Erro catastrófico com tipos: %s-%s\n", tipoTS(*t1), tipoTS(*t2));
+  imprimeErro(str);
+ }
 }
 
 int main (int argc, char** argv)
@@ -968,8 +1015,8 @@ int main (int argc, char** argv)
    TS = criaTS();
    pilhona = list_new();
    parametros = list_new();
+   pilhaTipo = list_new();
    ehPassagemParametro = 0;
-   tipoCorrente = -1;
 
    yyin=fp;
    yyparse();

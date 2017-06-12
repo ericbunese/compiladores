@@ -1,10 +1,12 @@
-program exemplo75 (input, output);
-var a:imaginario;
-	x:integer;
-	function f(x:imaginario):imaginario;
-	begin
-		f:=5i
-	end;
+program type2 (input, output);
+var im : imaginario;
+    x: integer;
 begin
-	write(1)
+(* bonus 1 - 5 pts*)
+   im := 2i;
+   x := im * im;
+   if (x=2)
+      write (2);
+   x := im * im * im (*Erro*)
+
 end.

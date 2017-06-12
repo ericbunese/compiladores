@@ -145,3 +145,7 @@ void chamaProcedimento(char *token);
 void empilhaTipoPassagemParametro();
 void imprimeAlt();
 void empilhaString(char *str1, list l);
+
+
+void empilhaTipo(int tipo);
+void consomeTipo(int limpar);
