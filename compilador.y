@@ -273,6 +273,7 @@ lista_parametros: ABRE_PARENTESES {contVar = 0; contVar2 = 0;} lista_id_parametr
 ;
 
 lista_id_parametros: lista_id_parametros2 lista_id_parametros3
+                   |
 ;
 
 lista_id_parametros3: PONTO_E_VIRGULA {contVar2 = 0;} lista_id_parametros
@@ -459,6 +460,7 @@ comandos: comando {printf("primeiro\n");}
 
 comando: rotulo comando_sem_rotulo
        | comando_sem_rotulo
+       |
 ;
 
 rotulo: NUMERO DOIS_PONTOS
@@ -976,7 +978,7 @@ void chamaProcedimento(char *token)
  tSimboloTs* ss = buscaTS(token);
  if (ss)
  {
-  if (ss->categoria == TS_CAT_FU)
+  if (ss->categoria == TS_CAT_CP)
   {
    char str[TAM_TOKEN];
    sprintf(str, "%d", nivelLexico);
