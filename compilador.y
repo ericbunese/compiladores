@@ -27,6 +27,10 @@ list parametros;
 list parametros2;
 list pilhaTipo;
 
+// to deal with - expression
+int countTermo[1000];
+int nivelExpressao;
+
 %}
 
 %token PROGRAM ABRE_PARENTESES FECHA_PARENTESES
@@ -915,22 +919,54 @@ expressao_completa2: compara expressao { consomeTipo(1, 0); empilhaTipo(TS_TIP_B
                    |
 ;
 
-expressao: termo expressao_intermediaria expressao_intermediaria2
-         | expressao_intermediaria2
+expressao: MAIS {printf("aaa\n");} expressao2
+        | MENOS 
+        {
+
+          // deals with minus signal before expression
+          // since there may be an expression inside another expression (using parenthesis)
+          // we must know in which level we are 
+          nivelExpressao++;
+          char str[1000];
+          sprintf(str, "%s %s","CRCT","0"); 
+          geraCodigo(NULL, str, NULL, NULL, NULL);
+          // initialize with 1 so se know we have a minus signal to deal with
+          countTermo[nivelExpressao] = 1;
+        } 
+        expressao2
+        {
+          // restore to 0 since we already dealed with it
+          countTermo[nivelExpressao] = 0;
+          // decreases level
+          nivelExpressao--;
+        }
+        | expressao2
 ;
 
-expressao_intermediaria2: expressao2 expressao
-                        | termo2 expressao
-                        |
-;
 
-expressao_intermediaria: expressao2
-                       |
-;
+expressao2: 
+          {
+                // only increments if it was initialized with one
+                // that means only expression levels with minus signals will be incremented
+                countTermo[nivelExpressao]+= countTermo[nivelExpressao] > 0;
+          }
+          termo
 
-expressao2: MAIS termo {geraCodigo(NULL, "SOMA", NULL, NULL, NULL); consomeTipo(0, 0);}
-          | MENOS termo {geraCodigo(NULL, "SUBT", NULL, NULL, NULL); consomeTipo(0, 0);}
-          | AND termo {geraCodigo(NULL, "CONJ", NULL, NULL, NULL); consomeTipo(0, 0);}
+          {
+              // decreases counter. 
+              // We only generate the SUBT code if we're in the "first" term of the tree
+              // i can explain this but it's too big an explanation to put in comments
+              countTermo[nivelExpressao]-= countTermo[nivelExpressao] > 0;
+              // if expression started with minus signal, generate SUBT code
+              if (countTermo[nivelExpressao] == 1) 
+              {
+                geraCodigo(NULL, "SUBT", NULL, NULL, NULL);
+              }
+
+          } 
+          |expressao2 MAIS termo {geraCodigo(NULL, "SOMA", NULL, NULL, NULL); consomeTipo(0, 0);}
+          |expressao2 MENOS termo {geraCodigo(NULL, "SUBT", NULL, NULL, NULL); consomeTipo(0, 0);}
+          |expressao2 OR termo {geraCodigo(NULL, "DISJ", NULL, NULL, NULL); consomeTipo(0, 0);}
 ;
 
 termo: fator termo_intermediario
@@ -942,7 +978,7 @@ termo_intermediario: termo2
 
 termo2: MULT fator {geraCodigo(NULL, "MULT", NULL, NULL, NULL); consomeTipo(1, 1);}
       | DIV fator {geraCodigo(NULL, "DIVI", NULL, NULL, NULL); consomeTipo(1, 1);}
-      | OR fator {geraCodigo(NULL, "DISJ", NULL, NULL, NULL); consomeTipo(0, 0);}
+      | AND fator {geraCodigo(NULL, "CONJ", NULL, NULL, NULL); consomeTipo(0, 0);}
 ;
 
 fator: variavel

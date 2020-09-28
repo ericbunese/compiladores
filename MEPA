@@ -1,14 +1,20 @@
      INPP
-     DSVS R00
-R01: ENPR 0
-     CRVL 1, -4
-     IMPR
-     RTPR 0, 1
-R00: NADA
+     AMEM 1
+     CRCT 0
      CRCT 1
      CRCT 2
-     CRCT 3
-     MULT
      SOMA
-     CHPR R01, 0
+     SUBT
+     ARMZ 0, 0
+     CRCT 0
+     CRCT 3
+     SUBT
+     CRCT 4
+     SOMA
+     ARMZ 0, 0
+     CRCT 0
+     CRCT 5
+     SUBT
+     ARMZ 0, 0
+     DMEM 1
      PARA

@@ -1,8 +1,7 @@
 program teste(input, output);
-  procedure p(a:integer);
-  begin
-    write(a)
-  end;
+var x: integer;
 begin
-  p(1+(2i*3i))
+    x:=-(1+2);
+    x:=-3+4;
+    x:=-5
 end.
